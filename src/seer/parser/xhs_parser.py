@@ -1,4 +1,6 @@
 from bs4 import BeautifulSoup
+import re
+import json
 from typing import Dict, List, Optional, Any
 from ..logger import logger
 from ..config import settings
@@ -14,22 +16,32 @@ class XiaohongshuParser:
             return None
         
         try:
-            soup = BeautifulSoup(html_content, "html.parser")
+            # 直接使用正则表达式提取关键信息
+            up_info = self._parse_up_info_direct(html_content)
             
-            # 解析UP主信息
-            up_info = self._parse_up_info(soup)
+            # 解析内容信息（用户主页没有单条内容，返回空）
+            content_info = {
+                "content_id": "",
+                "title": "",
+                "text": "",
+                "publish_time": "",
+                "content_type": "text",
+                "images": [],
+                "videos": []
+            }
             
-            # 解析内容信息
-            content_info = self._parse_content_info(soup)
+            # 解析评论信息（用户主页没有评论，返回空列表）
+            comments = []
             
-            # 解析评论信息
-            comments = self._parse_comments(soup)
+            # 提取笔记列表
+            notes = self._parse_notes(html_content)
             
             # 组合结果
             result = {
                 "up_info": up_info,
                 "content_info": content_info,
-                "comments": comments
+                "comments": comments,
+                "notes": notes
             }
             
             logger.info("页面解析成功")
@@ -39,25 +51,172 @@ class XiaohongshuParser:
             logger.error(f"页面解析失败: {str(e)}")
             return None
     
-    def _parse_up_info(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        """解析UP主信息"""
+    def _parse_notes(self, html_content: str) -> List[Dict[str, Any]]:
+        """从HTML中提取笔记标题和链接"""
         try:
-            # 示例：根据实际HTML结构调整选择器
+            notes = []
+            
+            # 使用正则表达式查找包含notes字段的JSON结构
+            notes_pattern = r'"notes":\[\[(.*?)\]\]'
+            notes_match = re.search(notes_pattern, html_content, re.DOTALL)
+            
+            if not notes_match:
+                logger.debug("未找到notes字段")
+                return notes
+            
+            notes_data = notes_match.group(1)
+            
+            # 提取所有noteCard对象
+            note_card_pattern = r'"noteCard":\{([^}]*noteId[^}]*)\}'
+            note_card_matches = re.findall(note_card_pattern, notes_data, re.DOTALL)
+            
+            # 限制提取的笔记数量
+            max_notes = self.config.max_notes
+            note_card_matches = note_card_matches[:max_notes]
+            
+            for i, note_card_str in enumerate(note_card_matches):
+                # 提取xsecToken
+                xsec_token_pattern = r'"xsecToken":"([^"]+)"'
+                xsec_token_match = re.search(xsec_token_pattern, note_card_str)
+                xsec_token = xsec_token_match.group(1) if xsec_token_match else ""
+                
+                # 提取displayTitle
+                title_pattern = r'"displayTitle":"([^"]+)"'
+                title_match = re.search(title_pattern, note_card_str)
+                title = title_match.group(1) if title_match else ""
+                
+                # 提取type
+                type_pattern = r'"type":"([^"]+)"'
+                type_match = re.search(type_pattern, note_card_str)
+                note_type = type_match.group(1) if type_match else "normal"
+                
+                # 提取用户ID
+                user_id_pattern = r'"userId":"([^"]+)"'
+                user_id_match = re.search(user_id_pattern, note_card_str)
+                user_id = user_id_match.group(1) if user_id_match else "unknown_user"
+                
+                # 构建笔记链接 - 使用用户ID和索引作为标识符
+                note_url = f"https://www.xiaohongshu.com/user/profile/{user_id}?xsec_token={xsec_token}&xsec_source=pc_search#note_{i}"
+                
+                # 使用user_id和索引生成note_id
+                note_id = f"{user_id}_note_{i}"
+                
+                note = {
+                    "note_id": note_id,
+                    "title": title,
+                    "url": note_url,
+                    "type": note_type
+                }
+                
+                notes.append(note)
+            
+            logger.debug(f"解析到 {len(notes)} 条笔记")
+            return notes
+        
+        except Exception as e:
+            logger.error(f"笔记解析失败: {str(e)}")
+            return []
+    
+    def _extract_json_data(self, html_content: str) -> Optional[Dict[str, Any]]:
+        """从HTML中提取JSON数据"""
+        try:
+            # 使用BeautifulSoup查找所有script标签
+            soup = BeautifulSoup(html_content, "html.parser")
+            scripts = soup.find_all("script")
+            
+            # 遍历所有script标签，查找包含用户数据的标签
+            for script in scripts:
+                script_content = script.string
+                if script_content and "userId" in script_content and "nickname" in script_content:
+                    # 尝试提取JSON数据
+                    # 查找第一个 { 和最后一个 } 来提取完整的JSON对象
+                    start = script_content.find("{")
+                    end = script_content.rfind("}") + 1
+                    
+                    if start != -1 and end != -1:
+                        json_str = script_content[start:end]
+                        
+                        # 清理JSON字符串
+                        # 1. 替换转义的斜杠
+                        json_str = re.sub(r'\\u002F', '/', json_str)
+                        # 2. 替换其他可能的转义字符
+                        json_str = json_str.replace('\\n', '').replace('\\r', '').replace('\\t', '')
+                        # 3. 修复可能的JSON格式问题
+                        json_str = re.sub(r',\s*}', '}', json_str)  # 移除末尾多余的逗号
+                        json_str = re.sub(r',\s*\]', ']', json_str)  # 移除数组末尾多余的逗号
+                        
+                        # 尝试解析JSON
+                        try:
+                            return json.loads(json_str)
+                        except json.JSONDecodeError as e:
+                            logger.error(f"JSON解析失败，尝试修复格式: {str(e)}")
+                            
+                            # 更严格的修复：移除所有可能的非法字符
+                            json_str = re.sub(r'[^\x20-\x7E]+', '', json_str)
+                            try:
+                                return json.loads(json_str)
+                            except json.JSONDecodeError as e2:
+                                logger.error(f"JSON修复后仍解析失败: {str(e2)}")
+                                continue
+            
+            logger.error("无法找到包含用户数据的JSON")
+            return None
+        
+        except Exception as e:
+            logger.error(f"提取JSON数据失败: {str(e)}")
+            return None
+    
+    def _parse_up_info(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
+        """从JSON数据中解析UP主信息"""
+        try:
             up_info = {
                 "username": "",
                 "user_id": "",
                 "avatar": ""
             }
             
-            # 查找用户名
-            username_elem = soup.find("div", class_="user-name") or soup.find("span", class_="username")
-            if username_elem:
-                up_info["username"] = username_elem.text.strip()
-            
-            # 查找头像
-            avatar_elem = soup.find("img", class_="avatar")
-            if avatar_elem and avatar_elem.get("src"):
-                up_info["avatar"] = avatar_elem["src"]
+            # 查找用户信息
+            # 检查不同可能的数据路径
+            if isinstance(json_data, dict):
+                # 路径1: 直接在user字段中
+                if "user" in json_data and isinstance(json_data["user"], dict):
+                    user = json_data["user"]
+                    up_info["username"] = user.get("nickname", "") or user.get("nickName", "")
+                    up_info["user_id"] = user.get("userId", "")
+                    up_info["avatar"] = user.get("avatar", "")
+                
+                # 路径2: 在state.user中
+                elif "state" in json_data and isinstance(json_data["state"], dict):
+                    state = json_data["state"]
+                    if "user" in state and isinstance(state["user"], dict):
+                        user = state["user"]
+                        up_info["username"] = user.get("nickname", "") or user.get("nickName", "")
+                        up_info["user_id"] = user.get("userId", "")
+                        up_info["avatar"] = user.get("avatar", "")
+                
+                # 路径3: 查找所有包含userId和nickname的地方
+                else:
+                    # 将JSON数据转换为字符串，查找用户信息
+                    json_str = json.dumps(json_data)
+                    
+                    # 提取用户名
+                    username_match = re.search(r'"nickname":"([^"]+)"', json_str)
+                    if username_match:
+                        up_info["username"] = username_match.group(1)
+                    else:
+                        username_match = re.search(r'"nickName":"([^"]+)"', json_str)
+                        if username_match:
+                            up_info["username"] = username_match.group(1)
+                    
+                    # 提取用户ID
+                    user_id_match = re.search(r'"userId":"([^"]+)"', json_str)
+                    if user_id_match:
+                        up_info["user_id"] = user_id_match.group(1)
+                    
+                    # 提取头像URL
+                    avatar_match = re.search(r'"avatar":"([^"]+)"', json_str)
+                    if avatar_match:
+                        up_info["avatar"] = avatar_match.group(1)
             
             logger.debug(f"UP主信息解析: {up_info}")
             return up_info
@@ -66,53 +225,39 @@ class XiaohongshuParser:
             logger.error(f"UP主信息解析失败: {str(e)}")
             return {"username": "", "user_id": "", "avatar": ""}
     
-    def _parse_content_info(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        """解析内容信息"""
+    def _parse_content_info(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
+        """从JSON数据中解析内容信息"""
         try:
             content_info = {
                 "content_id": "",
                 "title": "",
                 "text": "",
                 "publish_time": "",
-                "content_type": "",
+                "content_type": "text",
                 "images": [],
                 "videos": []
             }
             
-            # 查找标题
-            title_elem = soup.find("h1", class_="title") or soup.find("div", class_="note-title")
-            if title_elem:
-                content_info["title"] = title_elem.text.strip()
-            
-            # 查找正文
-            text_elem = soup.find("div", class_="content") or soup.find("div", class_="note-content")
-            if text_elem:
-                content_info["text"] = text_elem.text.strip()
-            
-            # 查找图片
-            img_elems = soup.find_all("img", class_="image") or soup.find_all("img", class_="note-image")
-            for img_elem in img_elems:
-                if img_elem.get("src"):
-                    content_info["images"].append(img_elem["src"])
-            
-            # 查找视频
-            video_elems = soup.find_all("video")
-            for video_elem in video_elems:
-                if video_elem.get("src"):
-                    content_info["videos"].append(video_elem["src"])
-                else:
-                    # 检查是否有source标签
-                    source_elem = video_elem.find("source")
-                    if source_elem and source_elem.get("src"):
-                        content_info["videos"].append(source_elem["src"])
-            
-            # 确定内容类型
-            if content_info["videos"]:
-                content_info["content_type"] = "video"
-            elif content_info["images"]:
-                content_info["content_type"] = "image"
-            else:
-                content_info["content_type"] = "text"
+            # 对于用户主页，我们可以提取用户的笔记列表信息
+            # 查找笔记数据
+            if isinstance(json_data, dict):
+                # 查找包含笔记的字段
+                if "notes" in json_data:
+                    notes = json_data["notes"]
+                    if isinstance(notes, list) and notes:
+                        # 使用第一条笔记作为示例
+                        first_note = notes[0]
+                        content_info["title"] = first_note.get("displayTitle", "")
+                        # 提取图片
+                        if "cover" in first_note and isinstance(first_note["cover"], dict):
+                            cover = first_note["cover"]
+                            if "url" in cover:
+                                content_info["images"].append(cover["url"])
+                            elif "infoList" in cover:
+                                for info in cover["infoList"]:
+                                    if "url" in info:
+                                        content_info["images"].append(info["url"])
+                                        break
             
             logger.debug(f"内容信息解析: {content_info}")
             return content_info
@@ -124,53 +269,56 @@ class XiaohongshuParser:
                 "title": "",
                 "text": "",
                 "publish_time": "",
-                "content_type": "",
+                "content_type": "text",
                 "images": [],
                 "videos": []
             }
     
-    def _parse_comments(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
-        """解析评论信息"""
+    def _parse_comments(self, json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """从JSON数据中解析评论信息"""
         try:
             comments = []
             
-            # 查找评论容器
-            comment_container = soup.find("div", class_="comments") or soup.find("div", class_="note-comments")
-            if not comment_container:
-                return comments
-            
-            # 查找评论列表
-            comment_elems = comment_container.find_all("div", class_="comment-item") or comment_container.find_all("div", class_="comment")
-            
-            # 限制最大评论数
-            for i, comment_elem in enumerate(comment_elems[:self.config.max_comments]):
-                comment = {
-                    "comment_id": f"comment_{i}",
-                    "commenter": "",
-                    "content": "",
-                    "comment_time": ""
-                }
-                
-                # 查找评论者
-                commenter_elem = comment_elem.find("span", class_="commenter") or comment_elem.find("div", class_="username") or comment_elem.find("span", class_="username")
-                if commenter_elem:
-                    comment["commenter"] = commenter_elem.text.strip()
-                
-                # 查找评论内容
-                content_elem = comment_elem.find("div", class_="comment-content") or comment_elem.find("span", class_="content")
-                if content_elem:
-                    comment["content"] = content_elem.text.strip()
-                
-                # 查找评论时间
-                time_elem = comment_elem.find("span", class_="comment-time") or comment_elem.find("div", class_="time")
-                if time_elem:
-                    comment["comment_time"] = time_elem.text.strip()
-                
-                comments.append(comment)
-            
+            # 用户主页没有评论，返回空列表
             logger.debug(f"解析到 {len(comments)} 条评论")
             return comments
         
         except Exception as e:
             logger.error(f"评论解析失败: {str(e)}")
             return []
+    
+    def _parse_up_info_direct(self, html_content: str) -> Dict[str, Any]:
+        """直接从HTML中提取UP主信息"""
+        try:
+            up_info = {
+                "username": "",
+                "user_id": "",
+                "avatar": ""
+            }
+            
+            # 提取用户名
+            username_pattern = r'"nickname":"([^"]+)"'
+            username_match = re.search(username_pattern, html_content)
+            if username_match:
+                up_info["username"] = username_match.group(1)
+            
+            # 提取用户ID
+            user_id_pattern = r'"userId":"([^"]+)"'
+            user_id_match = re.search(user_id_pattern, html_content)
+            if user_id_match:
+                up_info["user_id"] = user_id_match.group(1)
+            
+            # 提取头像URL
+            avatar_pattern = r'"avatar":"([^"]+)"'
+            avatar_match = re.search(avatar_pattern, html_content)
+            if avatar_match:
+                up_info["avatar"] = avatar_match.group(1)
+                # 清理头像URL中的转义字符
+                up_info["avatar"] = up_info["avatar"].replace('\\u002F', '/')
+            
+            logger.debug(f"UP主信息解析: {up_info}")
+            return up_info
+        
+        except Exception as e:
+            logger.error(f"UP主信息解析失败: {str(e)}")
+            return {"username": "", "user_id": "", "avatar": ""}

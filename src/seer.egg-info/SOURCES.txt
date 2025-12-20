@@ -7,6 +7,7 @@ src/seer.egg-info/SOURCES.txt
 src/seer.egg-info/dependency_links.txt
 src/seer.egg-info/requires.txt
 src/seer.egg-info/top_level.txt
+src/seer/config/__init__.py
 src/seer/config/settings.py
 src/seer/crawler/__init__.py
 src/seer/crawler/anti_crawler.py

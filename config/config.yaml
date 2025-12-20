@@ -15,6 +15,7 @@ crawler:
 # Parser settings
 parser:
   max_comments: 100
+  max_notes: 10
 
 # Storage settings
 storage:

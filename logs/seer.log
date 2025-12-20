@@ -11,3 +11,115 @@
 2025-12-20 21:54:02,038 - seer - INFO - 页面解析成功
 2025-12-20 21:54:02,045 - seer - INFO - 元数据保存成功: C:\Users\zz\AppData\Local\Temp\pytest-of-zz\pytest-2\test_save_metadata0\metadata.json
 2025-12-20 21:54:02,048 - seer - INFO - 元数据保存成功: C:\Users\zz\AppData\Local\Temp\pytest-of-zz\pytest-2\test_save_crawled_data0\user_123\2025-12-20\metadata.json
+2025-12-20 22:48:29,101 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:48:29,974 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:48:43,354 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:48:43,755 - seer - INFO - 页面解析成功
+2025-12-20 22:48:43,756 - seer - INFO - 元数据保存成功: ./data\user_还是叫吴富贵吧\2025-12-20\metadata.json
+2025-12-20 22:48:43,756 - seer - INFO - 爬虫任务执行成功
+2025-12-20 22:48:43,756 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 22:49:46,878 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:49:48,004 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:50:07,428 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:50:07,813 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 22:50:07,831 - seer - INFO - 页面解析成功
+2025-12-20 22:50:07,832 - seer - INFO - 元数据保存成功: ./data\user_还是叫吴富贵吧\2025-12-20\metadata.json
+2025-12-20 22:50:07,832 - seer - INFO - 爬虫任务执行成功
+2025-12-20 22:50:07,832 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 22:52:25,126 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:52:25,961 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:52:42,038 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:52:42,406 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 22:52:42,408 - seer - ERROR - 提取JSON数据失败: Expecting value: line 1 column 2624 (char 2623)
+2025-12-20 22:52:42,408 - seer - ERROR - 无法从HTML中提取JSON数据
+2025-12-20 22:52:42,408 - seer - ERROR - 页面解析失败，任务终止
+2025-12-20 22:52:42,408 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 22:53:45,012 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:53:45,892 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:54:03,739 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:54:04,139 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 22:54:04,154 - seer - ERROR - JSON解析失败，尝试修复格式: Expecting value: line 1 column 2624 (char 2623)
+2025-12-20 22:54:04,155 - seer - ERROR - JSON修复后仍解析失败: Expecting value: line 1 column 2328 (char 2327)
+2025-12-20 22:54:04,155 - seer - ERROR - 无法找到包含用户数据的JSON
+2025-12-20 22:54:04,155 - seer - ERROR - 无法从HTML中提取JSON数据
+2025-12-20 22:54:04,155 - seer - ERROR - 页面解析失败，任务终止
+2025-12-20 22:54:04,155 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 22:54:46,814 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:54:47,665 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:55:02,150 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 22:55:02,525 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 22:55:02,526 - seer - INFO - 页面解析成功
+2025-12-20 22:55:02,527 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 22:55:02,527 - seer - INFO - 爬虫任务执行成功
+2025-12-20 22:55:02,527 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:04:41,680 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:04:43,766 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:05:00,050 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:05:00,491 - seer - INFO - 页面解析成功
+2025-12-20 23:05:00,492 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 23:05:00,492 - seer - INFO - 爬虫任务执行成功
+2025-12-20 23:05:00,492 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:05:28,446 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:05:30,346 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:05:47,061 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:05:47,475 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 23:05:47,476 - seer - INFO - 页面解析成功
+2025-12-20 23:05:47,477 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 23:05:47,477 - seer - INFO - 爬虫任务执行成功
+2025-12-20 23:05:47,477 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:07:12,540 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:07:14,744 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:07:31,431 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:07:31,866 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 23:07:31,868 - seer - INFO - 页面解析成功
+2025-12-20 23:07:31,868 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 23:07:31,870 - seer - ERROR - 爬虫任务执行失败: name 'os' is not defined
+2025-12-20 23:07:31,870 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:08:00,917 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:08:02,806 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:08:15,784 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:08:16,182 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 23:08:16,184 - seer - INFO - 页面解析成功
+2025-12-20 23:08:16,185 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 23:08:16,185 - seer - INFO - 笔记列表保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.txt
+2025-12-20 23:08:16,186 - seer - INFO - 笔记列表JSON保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.json
+2025-12-20 23:08:16,186 - seer - INFO - 爬虫任务执行成功
+2025-12-20 23:08:16,186 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:16:30,265 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:16:32,526 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:16:46,601 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:16:47,037 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 23:16:47,039 - seer - INFO - 页面解析成功
+2025-12-20 23:16:47,040 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 23:16:47,040 - seer - INFO - 笔记列表保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.txt
+2025-12-20 23:16:47,041 - seer - INFO - 笔记列表JSON保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.json
+2025-12-20 23:16:47,041 - seer - INFO - 爬虫任务执行成功
+2025-12-20 23:16:47,041 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:19:06,347 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/explore/67656c27000000002100b038?xsec_token=ABhu_Cqz8_LewlXka4tu0shXry0NJGFPzozm1JGWQEf3I=&xsec_source=pc_search
+2025-12-20 23:19:08,247 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/explore/67656c27000000002100b038?xsec_token=ABhu_Cqz8_LewlXka4tu0shXry0NJGFPzozm1JGWQEf3I=&xsec_source=pc_search
+2025-12-20 23:19:24,891 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/explore/67656c27000000002100b038?xsec_token=ABhu_Cqz8_LewlXka4tu0shXry0NJGFPzozm1JGWQEf3I=&xsec_source=pc_search
+2025-12-20 23:19:25,347 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 23:19:25,349 - seer - INFO - 页面解析成功
+2025-12-20 23:19:25,351 - seer - INFO - 元数据保存成功: ./data\60728c860000000001007b8f\2025-12-20\metadata.json
+2025-12-20 23:19:25,351 - seer - INFO - 爬虫任务执行成功
+2025-12-20 23:19:25,352 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:20:14,706 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:20:16,748 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:20:37,074 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:20:37,506 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 23:20:37,507 - seer - INFO - 页面解析成功
+2025-12-20 23:20:37,508 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 23:20:37,509 - seer - INFO - 笔记列表保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.txt
+2025-12-20 23:20:37,509 - seer - INFO - 笔记列表JSON保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.json
+2025-12-20 23:20:37,509 - seer - INFO - 爬虫任务执行成功
+2025-12-20 23:20:37,509 - seer - INFO - 爬虫任务执行完毕
+2025-12-20 23:21:21,842 - seer - INFO - 开始执行小红书爬虫任务: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:21:24,049 - seer - INFO - 开始爬取URL: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:21:38,683 - seer - INFO - 成功获取页面内容: https://www.xiaohongshu.com/user/profile/5b6150c56b58b741e26b8c7f?xsec_token=ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D&xsec_source=pc_search
+2025-12-20 23:21:39,105 - seer - INFO - 原始HTML内容已保存到test_html.html文件
+2025-12-20 23:21:39,106 - seer - INFO - 页面解析成功
+2025-12-20 23:21:39,107 - seer - INFO - 元数据保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\metadata.json
+2025-12-20 23:21:39,107 - seer - INFO - 笔记列表保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.txt
+2025-12-20 23:21:39,108 - seer - INFO - 笔记列表JSON保存成功: ./data\5b6150c56b58b741e26b8c7f\2025-12-20\notes.json
+2025-12-20 23:21:39,108 - seer - INFO - 爬虫任务执行成功
+2025-12-20 23:21:39,108 - seer - INFO - 爬虫任务执行完毕

@@ -15,6 +15,7 @@ class CrawlerConfig(BaseModel):
 # 解析器配置模型
 class ParserConfig(BaseModel):
     max_comments: int = Field(default=100)
+    max_notes: int = Field(default=10)
 
 # 存储配置模型
 class StorageConfig(BaseModel):
