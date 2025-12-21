@@ -7,11 +7,13 @@ crawler:
   delay_range:
     min: 1
     max: 5
+  request_interval: 1  # 请求间隔时间（秒）
+  max_pages: 1  # 最大爬取页面数
   user_agents:
     - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     - "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
   proxies: []
-  cookies_str: "abRequestId=0a67bf63-94bf-52fc-aeb0-a2252441a7b6; a1=19b3c2114a0ugv9sl8b783132iz14dh5u7g5b9rbj50000381729; webId=9d25f895f404c1e0c4b6f9cb73dc0ee0; timeslogin=0e5024fe-9407-4a23-983c-8d52c751de11; gid=yjDqSJyJyY7yyjDqSJyy4WjF087khjM1YDWYkDVqyqJ3u228y4fx2D888qYyWJj8KWJDjWqi; webBuild=5.1.1; customerClientId=147391779100031; access-token-open.xiaohongshu.com=customer.open.AT-68c517586196573266427908ylzb8bw5k53pewql; access-token-open.beta.xiaohongshu.com=customer.open.AT-68c517586196573266427908ylzb8bw5k53pewql; customer-sso-sid=68c517586196706410561540915t8oomixhk2unr; x-user-id-ark.xiaohongshu.com=5d802a6d0000000001007951; access-token-ark.xiaohongshu.com=customer.ark.AT-68c517586196710705545218zwxmemzztxnrb9mx; beaker.session.id=183f569a963dd1c51c586ebb4c7755c2b7d2d36bgAJ9cQAoWAsAAABhcmstbGlhcy1pZHEBWBgAAAA2M2UzYmRhODc4M2I3OTAwMDE5NDc2MzBxAlgOAAAAcmEtdXNlci1pZC1hcmtxA1gYAAAANjNiYWQ4NDYyZDczNTEwMDAxMjUzN2NmcQRYDgAAAF9jcmVhdGlvbl90aW1lcQVHQdpR5W3WuFJYEQAAAHJhLWF1dGgtdG9rZW4tYXJrcQZYQQAAAGQzM2M1MjEwNjFkYTRiYTI5NzQ4YzI4MmM4N2NmNzJlLWNhYmE5YjI1YzA3ZTRjMWZhMDhlY2ZhNWU3NWY2ZjM1cQdYAwAAAF9pZHEIWCAAAABiYzdiZjk1N2JjZWE0MmIwYTE0ZjFkMzJjZDUzMDNiN3EJWA4AAABfYWNjZXNzZWRfdGltZXEKR0HaUeVt1rhSdS4=; xsecappid=xhs-pc-web; unread={%22ub%22:%226947596e000000001e02e1f5%22%2C%22ue%22:%226947c792000000001e009521%22%2C%22uc%22:25}; websectiga=3fff3a6f9f07284b62c0f2ebf91a3b10193175c06e4f71492b60e056edcdebb2; sec_poison_id=7a498f67-0111-4d56-9c36-2e8e71cf1c83; web_session=0400698cf469255629071fb6723b4b10b2256c; id_token=VjEAALz4fe0qEPiPT507YGI1YwyRlwIuNhnD0i7lLN2a987bY30e+BzyRrCaSCbMKD86qfpnMf57TGK2avfRRBpU15Sjrm5Q66gDgrNtRGxXtdL6z0LSxheZleN3EzZ/r5UWGFsc; loadts=1766325908070"  # 小红书登录cookies，需要从浏览器获取
+  # cookies_str 已迁移到 .env 文件中
 
 # Parser settings
 parser:

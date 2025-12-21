@@ -9,9 +9,12 @@ class CrawlerConfig(BaseModel):
     timeout: int = Field(default=30)
     retry_times: int = Field(default=3)
     delay_range: dict = Field(default_factory=lambda: {"min": 1, "max": 5})
+    request_interval: int = Field(default=1)  # 请求间隔时间（秒）
+    max_pages: int = Field(default=1)  # 最大爬取页面数
     user_agents: List[str] = Field(default_factory=list)
     proxies: List[str] = Field(default_factory=list)
     max_workers: int = Field(default=5)
+    # cookies_str 已迁移到环境变量 XHS_COOKIES 中
 
 # 解析器配置模型
 class ParserConfig(BaseModel):
@@ -35,6 +38,7 @@ class Settings(BaseSettings):
     parser: ParserConfig = Field(default_factory=ParserConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    xhs_cookies: Optional[str] = Field(default=None, alias="XHS_COOKIES")  # 从环境变量加载小红书cookies
     
     model_config = ConfigDict(
         env_file = ".env",

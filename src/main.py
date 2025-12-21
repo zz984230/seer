@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+from dotenv import load_dotenv
 from seer.crawler import XiaohongshuCrawler, XHS_Apis
 from seer.cleaner import XiaohongshuCleaner
 from seer.analyzer import XiaohongshuAnalyzer
@@ -13,6 +14,9 @@ from datetime import datetime
 
 def main():
     """应用主入口"""
+    # 加载环境变量
+    load_dotenv()
+    
     # 解析命令行参数
     parser = argparse.ArgumentParser(description="Xiaohongshu crawler application")
     parser.add_argument("--url", type=str, required=True, help="URL to crawl")
@@ -38,24 +42,44 @@ def main():
         os.makedirs(storage_path, exist_ok=True)
         
         # 使用新的爬虫方法获取用户的所有笔记
-        cookies_str = ""  # 从配置文件或浏览器中获取cookies
-        success, msg, notes = crawler.get_user_all_notes(args.url, cookies_str, args.max_notes)
+        cookies_str = os.getenv("XHS_COOKIES")  # 从环境变量获取cookies
+        if not cookies_str:
+            logger.error("未找到XHS_COOKIES环境变量，请检查.env文件")
+            return
+            
+        # 获取配置参数
+        max_pages = min(args.max_notes, settings.crawler.max_pages)
+        request_interval = settings.crawler.request_interval
+        logger.info(f"最大爬取页面数: {max_pages}, 请求间隔: {request_interval}秒")
+        
+        success, msg, notes = crawler.get_user_all_notes(args.url, cookies_str)
         if not success:
             logger.error(f"获取用户笔记失败: {msg}")
             return
+        
+        # 限制爬取的笔记数量
+        if len(notes) > max_pages:
+            notes = notes[:max_pages]
+            logger.info(f"限制爬取笔记数量为: {max_pages}")
         
         logger.info(f"获取到 {len(notes)} 条笔记")
         
         # 2. 获取笔记详细内容
         logger.info("开始获取笔记详细内容...")
         detailed_notes = []
+        import time
         
-        for note in notes:
+        for i, note in enumerate(notes):
             try:
                 success, msg, note_info = crawler.get_note_info(note["url"], cookies_str)
                 if success and note_info:
                     detailed_notes.append(note_info)
                     logger.info(f"✅ 成功获取笔记详细内容: {note['title']}")
+                
+                # 添加请求间隔（除了最后一个请求）
+                if i < len(notes) - 1:
+                    time.sleep(request_interval)
+                    
             except Exception as e:
                 logger.error(f"获取笔记详细内容失败: {note['title']}, 错误: {str(e)}")
                 continue

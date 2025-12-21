@@ -3,16 +3,47 @@ import math
 import random
 import execjs
 import os
+from loguru import logger
 from seer.crawler.utils.cookie_util import trans_cookies
 
-# 获取当前文件所在目录的绝对路径
-current_dir = os.path.dirname(os.path.abspath(__file__))
+# 获取静态文件目录的绝对路径
+static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static')
+static_dir = os.path.abspath(static_dir)
 
 # 构建静态文件的绝对路径
-xs_js_path = os.path.join(current_dir, '../static/xhs_xs_xsc_56.js')
-xs_js_path = os.path.abspath(xs_js_path)
-xray_js_path = os.path.join(current_dir, '../static/xhs_xray.js')
-xray_js_path = os.path.abspath(xray_js_path)
+xs_js_path = os.path.join(static_dir, 'xhs_xs_xsc_56.js')
+xray_js_path = os.path.join(static_dir, 'xhs_xray.js')
+xray_pack1_js_path = os.path.join(static_dir, 'xhs_xray_pack1.js')
+xray_pack2_js_path = os.path.join(static_dir, 'xhs_xray_pack2.js')
+
+# 读取并预处理xhs_xray.js文件，替换其中的相对路径
+with open(xray_js_path, 'r', encoding='utf-8') as f:
+    xray_js_content = f.read()
+# 替换JavaScript文件中的相对路径为绝对路径
+xray_js_content = xray_js_content.replace(
+    "require('./xhs_xray_pack1.js');", 
+    f"require('{xray_pack1_js_path.replace('\\', '/')}');"
+)
+xray_js_content = xray_js_content.replace(
+    "require('../static/xhs_xray_pack1.js');", 
+    f"require('{xray_pack1_js_path.replace('\\', '/')}');"
+)
+xray_js_content = xray_js_content.replace(
+    "require('./static/xhs_xray_pack1.js');", 
+    f"require('{xray_pack1_js_path.replace('\\', '/')}');"
+)
+xray_js_content = xray_js_content.replace(
+    "require('./xhs_xray_pack2.js');", 
+    f"require('{xray_pack2_js_path.replace('\\', '/')}');"
+)
+xray_js_content = xray_js_content.replace(
+    "require('../static/xhs_xray_pack2.js');", 
+    f"require('{xray_pack2_js_path.replace('\\', '/')}');"
+)
+xray_js_content = xray_js_content.replace(
+    "require('./static/xhs_xray_pack2.js');", 
+    f"require('{xray_pack2_js_path.replace('\\', '/')}');"
+)
 
 try:
     js = execjs.compile(open(xs_js_path, 'r', encoding='utf-8').read())
@@ -20,9 +51,9 @@ except Exception as e:
     js = execjs.compile(open(xs_js_path, 'r', encoding='utf-8').read())
 
 try:
-    xray_js = execjs.compile(open(xray_js_path, 'r', encoding='utf-8').read())
+    xray_js = execjs.compile(xray_js_content)
 except Exception as e:
-    xray_js = execjs.compile(open(xray_js_path, 'r', encoding='utf-8').read())
+    xray_js = execjs.compile(xray_js_content)
 
 def generate_x_b3_traceid(len=16):
     x_b3_traceid = ""
@@ -31,8 +62,16 @@ def generate_x_b3_traceid(len=16):
     return x_b3_traceid
 
 def generate_xs_xs_common(a1, api, data='', method='POST'):
-    ret = js.call('get_request_headers_params', api, data, a1, method)
-    xs, xt, xs_common = ret['xs'], ret['xt'], ret['xs_common']
+    try:
+        ret = js.call('get_request_headers_params', api, data, a1, method)
+        if isinstance(ret, dict):
+            xs, xt, xs_common = ret['xs'], ret['xt'], ret['xs_common']
+        else:
+            logger.error(f"JavaScript返回的不是字典类型: {type(ret)}")
+            raise Exception(f"JavaScript返回的不是字典类型: {type(ret)}")
+    except Exception as e:
+        logger.error(f"调用JavaScript函数出错: {str(e)}")
+        raise e
     return xs, xt, xs_common
 
 def generate_xs(a1, api, data=''):
@@ -99,8 +138,17 @@ def generate_headers(a1, api, data='', method='POST'):
 
 def generate_request_params(cookies_str, api, data='', method='POST'):
     cookies = trans_cookies(cookies_str)
+    if 'a1' not in cookies:
+        logger.error("cookies中没有找到a1键")
+        raise Exception("cookies中没有找到a1键")
     a1 = cookies['a1']
-    headers, data = generate_headers(a1, api, data, method)
+    try:
+        headers_result, data_result = generate_headers(a1, api, data, method)
+        headers = headers_result
+        data = data_result
+    except Exception as e:
+        logger.error(f"调用generate_headers出错: {str(e)}")
+        raise e
     return headers, cookies, data
 
 def splice_str(api, params):

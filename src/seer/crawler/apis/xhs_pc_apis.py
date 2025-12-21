@@ -13,6 +13,31 @@ from loguru import logger
 class XHS_Apis():
     def __init__(self):
         self.base_url = "https://edith.xiaohongshu.com"
+    
+    def _make_request(self, url: str, headers: dict, cookies: dict, proxies: dict = None):
+        """
+        辅助方法，用于统一处理requests.get调用
+        :param url: 请求URL
+        :param headers: 请求头
+        :param cookies: cookies
+        :param proxies: 代理设置
+        :return: response对象
+        """
+        # 确保proxies是字典类型
+        if proxies is None:
+            proxies = {}
+        elif not isinstance(proxies, dict):
+            logger.error(f"proxies不是字典类型: {proxies}，将其设置为空字典")
+            proxies = {}
+            
+        try:
+            response = requests.get(url, headers=headers, cookies=cookies, proxies=proxies)
+            return response
+        except Exception as req_error:
+            logger.error(f"requests.get执行出错: {str(req_error)}")
+            import traceback
+            logger.error(f"错误堆栈: {traceback.format_exc()}")
+            raise req_error
 
     def get_homefeed_all_channel(self, cookies_str: str, proxies: dict = None):
         """
@@ -23,7 +48,7 @@ class XHS_Apis():
         try:
             api = "/api/sns/web/v1/homefeed/category"
             headers, cookies, data = generate_request_params(cookies_str, api, '', 'GET')
-            response = requests.get(self.base_url + api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -117,7 +142,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -135,7 +160,7 @@ class XHS_Apis():
         try:
             api = f"/api/sns/web/v1/user/selfinfo"
             headers, cookies, data = generate_request_params(cookies_str, api, '', 'GET')
-            response = requests.get(self.base_url + api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -154,7 +179,7 @@ class XHS_Apis():
         try:
             api = f"/api/sns/web/v2/user/me"
             headers, cookies, data = generate_request_params(cookies_str, api, '', 'GET')
-            response = requests.get(self.base_url + api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -183,10 +208,35 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
-            res_json = response.json()
-            success, msg = res_json["success"], res_json["msg"]
+            
+            try:
+                response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
+                logger.info(f"requests.get执行成功")
+            except Exception as req_error:
+                logger.error(f"requests.get执行出错: {str(req_error)}")
+                import traceback
+                logger.error(f"错误堆栈: {traceback.format_exc()}")
+                raise req_error
+            logger.info(f"响应状态码: {response.status_code}")
+            logger.info(f"响应内容: {response.text[:500]}...")
+            try:
+                res_json = response.json()
+                logger.info(f"解析后的JSON类型: {type(res_json)}")
+                logger.info(f"解析后的JSON内容: {res_json}")
+                if isinstance(res_json, dict):
+                    logger.info(f"JSON键列表: {list(res_json.keys())}")
+                    success = res_json.get("success", False)
+                    msg = res_json.get("msg", "未知错误")
+                else:
+                    logger.error(f"响应不是字典类型，而是: {type(res_json)}")
+                    success = False
+                    msg = f"响应格式错误，期望字典，实际为{type(res_json)}"
+            except Exception as json_error:
+                logger.error(f"解析JSON时出错: {str(json_error)}")
+                logger.error(f"原始响应文本: {response.text}")
+                raise json_error
         except Exception as e:
+            logger.error(f"请求异常: {str(e)}")
             success = False
             msg = str(e)
         return success, msg, res_json
@@ -204,14 +254,25 @@ class XHS_Apis():
         try:
             urlParse = urllib.parse.urlparse(user_url)
             user_id = urlParse.path.split("/")[-1]
+            logger.info(f"解析用户ID: {user_id}")
             kvs = urlParse.query.split('&')
-            kvDist = {kv.split('=')[0]: kv.split('=')[1] for kv in kvs}
-            xsec_token = kvDist['xsec_token'] if 'xsec_token' in kvDist else ""
-            xsec_source = kvDist['xsec_source'] if 'xsec_source' in kvDist else "pc_search"
+            logger.info(f"URL参数列表: {kvs}")
+            # 修复URL参数解析，处理没有值的情况
+            kvDist = {}
+            for kv in kvs:
+                if '=' in kv:
+                    key, value = kv.split('=', 1)
+                    kvDist[key] = value
+            logger.info(f"解析后的参数字典: {kvDist}")
+            xsec_token = kvDist.get('xsec_token', "")
+            xsec_source = kvDist.get('xsec_source', "pc_search")
+            logger.info(f"xsec_token: {xsec_token}, xsec_source: {xsec_source}")
             while True:
                 success, msg, res_json = self.get_user_note_info(user_id, cursor, cookies_str, xsec_token, xsec_source, proxies)
+                logger.info(f"API调用结果: success={success}, msg={msg}, res_json类型={type(res_json)}")
                 if not success:
                     raise Exception(msg)
+                logger.info(f"res_json结构: {res_json}")
                 notes = res_json["data"]["notes"]
                 if 'cursor' in res_json["data"]:
                     cursor = str(res_json["data"]["cursor"])
@@ -246,7 +307,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -309,7 +370,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -404,7 +465,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -633,7 +694,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -690,7 +751,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -763,7 +824,7 @@ class XHS_Apis():
         try:
             api = "/api/sns/web/unread_count"
             headers, cookies, data = generate_request_params(cookies_str, api, '', 'GET')
-            response = requests.get(self.base_url + api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -787,7 +848,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -837,7 +898,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -887,7 +948,7 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
-            response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
+            response = self._make_request(self.base_url + splice_api, headers, cookies, proxies)
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
         except Exception as e:
@@ -921,8 +982,7 @@ class XHS_Apis():
             msg = str(e)
         return success, msg, connections_list
 
-    @staticmethod
-    def get_note_no_water_video(note_id):
+    def get_note_no_water_video(self, note_id, proxies: dict = None):
         """
             获取笔记无水印视频
             :param note_id: 你想要获取的笔记的id
@@ -934,7 +994,7 @@ class XHS_Apis():
         try:
             headers = get_common_headers()
             url = f"https://www.xiaohongshu.com/explore/{note_id}"
-            response = requests.get(url, headers=headers)
+            response = self._make_request(url, headers, {}, proxies)
             res = response.text
             video_addr = re.findall(r'<meta name="og:video" content="(.*?)">', res)[0]
         except Exception as e:
