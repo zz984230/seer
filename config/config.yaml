@@ -2,7 +2,7 @@
 
 # Crawler settings
 crawler:
-  timeout: 30
+  timeout: 60
   retry_times: 3
   delay_range:
     min: 1

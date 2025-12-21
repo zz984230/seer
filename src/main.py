@@ -1,8 +1,10 @@
 import argparse
 import os
 import json
-from seer.crawler import XiaohongshuCrawler
-from seer.parser import XiaohongshuParser
+from seer.crawler import XiaohongshuCrawler, XHS_Apis
+from seer.cleaner import XiaohongshuCleaner
+from seer.analyzer import XiaohongshuAnalyzer
+from seer.reporter import XiaohongshuReporter
 from seer.storage import DataStorage
 from seer.logger import logger
 from seer.config import settings
@@ -14,68 +16,116 @@ def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description="Xiaohongshu crawler application")
     parser.add_argument("--url", type=str, required=True, help="URL to crawl")
+    parser.add_argument("--max-notes", type=int, default=settings.parser.max_notes, help="Maximum number of notes to crawl")
     args = parser.parse_args()
     
     # 获取当前日期，用于存储目录
     current_date = datetime.now().strftime("%Y-%m-%d")
     
     # 初始化各个模块
-    crawler = XiaohongshuCrawler()
-    parser = XiaohongshuParser()
+    crawler = XiaohongshuCrawler()  # 已更新为使用Spider_XHS
+    cleaner = XiaohongshuCleaner()
+    analyzer = XiaohongshuAnalyzer()
+    reporter = XiaohongshuReporter()
     storage = DataStorage()
     
     logger.info(f"开始执行小红书爬虫任务: {args.url}")
     
     try:
-        # 1. 获取页面内容
-        html_content = crawler.get_page_content(args.url)
-        if not html_content:
-            logger.error("无法获取页面内容，任务终止")
+        # 1. 获取用户信息
+        user_id = args.url.split("/")[-1].split("?")[0]
+        storage_path = os.path.join(storage.base_dir, user_id, current_date)
+        os.makedirs(storage_path, exist_ok=True)
+        
+        # 使用新的爬虫方法获取用户的所有笔记
+        cookies_str = ""  # 从配置文件或浏览器中获取cookies
+        success, msg, notes = crawler.get_user_all_notes(args.url, cookies_str, args.max_notes)
+        if not success:
+            logger.error(f"获取用户笔记失败: {msg}")
             return
         
-        # 保存原始HTML内容到文件，用于分析真实笔记ID格式
-        with open("test_html.html", "w", encoding="utf-8") as f:
-            f.write(html_content)
-        logger.info("原始HTML内容已保存到test_html.html文件")
+        logger.info(f"获取到 {len(notes)} 条笔记")
         
-        # 2. 解析页面内容
-        parsed_data = parser.parse_page(html_content)
-        if not parsed_data:
-            logger.error("页面解析失败，任务终止")
-            return
+        # 2. 获取笔记详细内容
+        logger.info("开始获取笔记详细内容...")
+        detailed_notes = []
         
-        # 3. 保存爬取数据
-        success = storage.save_crawled_data(parsed_data, current_date)
-        
-        # 4. 保存笔记列表到文件
-        if "notes" in parsed_data and parsed_data["notes"]:
-            # 获取存储路径
-            user_id = parsed_data["up_info"].get("user_id", "unknown")
-            storage_path = os.path.join(storage.base_dir, user_id, current_date)
-            os.makedirs(storage_path, exist_ok=True)
+        for note in notes:
+            try:
+                success, msg, note_info = crawler.get_note_info(note["url"], cookies_str)
+                if success and note_info:
+                    detailed_notes.append(note_info)
+                    logger.info(f"✅ 成功获取笔记详细内容: {note['title']}")
+            except Exception as e:
+                logger.error(f"获取笔记详细内容失败: {note['title']}, 错误: {str(e)}")
+                continue
             
-            # 保存为txt文件
-            notes_txt_path = os.path.join(storage_path, "notes.txt")
-            with open(notes_txt_path, "w", encoding="utf-8") as f:
-                f.write("小红书笔记列表\n")
-                f.write("=" * 50 + "\n")
-                for i, note in enumerate(parsed_data["notes"], 1):
-                    f.write(f"{i}. {note['title']}\n")
-                    f.write(f"   链接: {note['url']}\n")
-                    f.write(f"   类型: {note['type']}\n")
-                    f.write("-" * 50 + "\n")
-            logger.info(f"笔记列表保存成功: {notes_txt_path}")
-            
-            # 保存为JSON文件（可选，方便后续处理）
-            notes_json_path = os.path.join(storage_path, "notes.json")
-            with open(notes_json_path, "w", encoding="utf-8") as f:
-                json.dump(parsed_data["notes"], f, ensure_ascii=False, indent=2)
-            logger.info(f"笔记列表JSON保存成功: {notes_json_path}")
+            if detailed_notes:
+                # 3. 保存笔记详细内容到文件
+                # 保存为txt文件
+                notes_txt_path = os.path.join(storage_path, "notes.txt")
+                with open(notes_txt_path, "w", encoding="utf-8") as f:
+                    f.write("小红书笔记列表\n")
+                    f.write("=" * 50 + "\n")
+                    for i, note in enumerate(detailed_notes, 1):
+                        f.write(f"{i}. {note['title']}\n")
+                        f.write(f"   链接: {note['url']}\n")
+                        f.write(f"   类型: {note['note_type']}\n")
+                        f.write(f"   内容: {note.get('desc', '无内容')[:100]}...\n")
+                        f.write(f"   点赞: {note.get('liked_count', 0)}")
+                        f.write(f"   收藏: {note.get('collected_count', 0)}")
+                        f.write(f"   评论: {note.get('comment_count', 0)}\n")
+                        f.write("-" * 50 + "\n")
+                logger.info(f"笔记列表保存成功: {notes_txt_path}")
+                
+                # 保存为JSON文件
+                notes_json_path = os.path.join(storage_path, "notes.json")
+                with open(notes_json_path, "w", encoding="utf-8") as f:
+                    json.dump(detailed_notes, f, ensure_ascii=False, indent=2)
+                logger.info(f"笔记详细内容JSON保存成功: {notes_json_path}")
+                
+                # 打印笔记信息
+                logger.info("\n获取的笔记信息：")
+                for i, note in enumerate(detailed_notes, 1):
+                    logger.info(f"{i}. 标题: {note['title']}")
+                    logger.info(f"   链接: {note['url']}")
+                    logger.info(f"   内容: {note.get('desc', '无内容')[:100]}...")
+                    logger.info(f"   点赞: {note.get('liked_count', 0)}")
+                    logger.info(f"   收藏: {note.get('collected_count', 0)}")
+                    logger.info(f"   评论: {note.get('comment_count', 0)}")
+                
+                # 4. 数据清洗
+                logger.info("开始数据清洗...")
+                cleaned_notes = cleaner.clean_batch_data(detailed_notes, "note")
+                logger.info(f"数据清洗完成，清洗后的笔记数量: {len(cleaned_notes)}")
+                
+                # 保存清洗后的数据
+                cleaned_notes_path = os.path.join(storage_path, "cleaned_notes.json")
+                with open(cleaned_notes_path, "w", encoding="utf-8") as f:
+                    json.dump(cleaned_notes, f, ensure_ascii=False, indent=2)
+                logger.info(f"清洗后的数据保存成功: {cleaned_notes_path}")
+                
+                # 5. 数据分析
+                logger.info("开始数据分析...")
+                analysis_results = analyzer.analyze_notes(cleaned_notes)
+                logger.info("数据分析完成")
+                
+                # 保存分析结果
+                analysis_results_path = os.path.join(storage_path, "analysis_results.json")
+                with open(analysis_results_path, "w", encoding="utf-8") as f:
+                    json.dump(analysis_results, f, ensure_ascii=False, indent=2)
+                logger.info(f"分析结果保存成功: {analysis_results_path}")
+                
+                # 6. 生成分析报告
+                logger.info("开始生成分析报告...")
+                report_paths = reporter.generate_all_reports({
+                    "notes_analysis": analysis_results,
+                    "users_analysis": {},
+                    "comments_analysis": {}
+                })
+                logger.info(f"分析报告生成完成，报告路径: {report_paths}")
         
-        if success:
-            logger.info("爬虫任务执行成功")
-        else:
-            logger.error("数据保存失败，任务终止")
+        logger.info("爬虫任务执行成功")
     
     except Exception as e:
         logger.error(f"爬虫任务执行失败: {str(e)}")

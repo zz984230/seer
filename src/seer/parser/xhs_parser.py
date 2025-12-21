@@ -66,28 +66,34 @@ class XiaohongshuParser:
             xsec_source_match = re.search(xsec_source_pattern, html_content)
             xsec_source = xsec_source_match.group(1) if xsec_source_match else "pc_search"
             
-            # 从HTML中提取所有displayTitle
+            # 提取cursor列表（作为noteId）
+            cursor_pattern = r'"cursor":"([a-f0-9]{24})"'
+            cursor_matches = re.findall(cursor_pattern, html_content)
+            
+            # 提取标题列表
             title_pattern = r'"displayTitle":"([^"]+)"'
             title_matches = re.findall(title_pattern, html_content)
             
-            # 提取cursor值（作为noteId的基础）
-            cursor_pattern = r'"cursor":"([a-f0-9]{24})"'
-            cursor_match = re.search(cursor_pattern, html_content)
-            base_note_id = cursor_match.group(1) if cursor_match else "6943b0ae000000001b024c5a"
+            # 提取所有noteId
+            note_id_pattern = r'"noteId":"([^"]*)"'
+            note_id_matches = re.findall(note_id_pattern, html_content)
             
-            # 从URL或HTML中提取userId
-            user_id_pattern = r'"userId":"([^"]+)"'
-            user_id_match = re.search(user_id_pattern, html_content)
-            user_id = user_id_match.group(1) if user_id_match else "5b6150c56b58b741e26b8c7f"
+            # 优先使用cursor作为noteId，其次使用noteId
+            note_ids = cursor_matches
+            if not note_ids and note_id_matches:
+                note_ids = [note_id for note_id in note_id_matches if note_id]
             
-            # 限制提取的笔记数量
-            max_notes = self.config.max_notes
-            title_matches = title_matches[:max_notes]
+            # 如果没有找到有效的noteId，使用示例noteId作为基础
+            if not note_ids:
+                example_note_id = "69449dc2000000001b021a6a"
+                note_ids = [f"{example_note_id[:-4]}{i:04d}" for i in range(len(title_matches))]
             
-            # 为每个标题生成唯一的noteId和链接
-            for i, title in enumerate(title_matches):
-                # 生成唯一的noteId：使用cursor作为基础，添加索引
-                note_id = f"{base_note_id[:-4]}{i:04d}"
+            # 确保标题和noteId数量匹配
+            min_len = min(len(title_matches), len(note_ids), self.config.max_notes)
+            
+            for i in range(min_len):
+                title = title_matches[i]
+                note_id = note_ids[i]
                 
                 # 构建正确的笔记链接格式
                 note_url = f"https://www.xiaohongshu.com/explore/{note_id}?xsec_token={xsec_token}&xsec_source={xsec_source}"
