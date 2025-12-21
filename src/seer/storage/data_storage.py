@@ -85,7 +85,7 @@ class DataStorage:
                 if self.save_media(video_url, video_path):
                     media_paths["videos"].append(video_path)
             
-            # 更新metadata中的媒体路径
+            # 更新metadata中的媒体路径，确保包含notes字段
             metadata = {
                 **crawled_data,
                 "media_paths": media_paths,

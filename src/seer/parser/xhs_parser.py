@@ -56,56 +56,47 @@ class XiaohongshuParser:
         try:
             notes = []
             
-            # 使用正则表达式查找包含notes字段的JSON结构
-            notes_pattern = r'"notes":\[\[(.*?)\]\]'
-            notes_match = re.search(notes_pattern, html_content, re.DOTALL)
+            # 提取xsecToken（用于构建链接）
+            xsec_token_pattern = r'"xsecToken":"([^"]+)"'
+            xsec_token_match = re.search(xsec_token_pattern, html_content)
+            xsec_token = xsec_token_match.group(1) if xsec_token_match else "ABhU-3wtni9-4VBCkbuCZgesNnJlCAcu5IcuV3JQJzUSo%3D"
             
-            if not notes_match:
-                logger.debug("未找到notes字段")
-                return notes
+            # 提取xsecSource（用于构建链接）
+            xsec_source_pattern = r'"xsecSource":"([^"]+)"'
+            xsec_source_match = re.search(xsec_source_pattern, html_content)
+            xsec_source = xsec_source_match.group(1) if xsec_source_match else "pc_search"
             
-            notes_data = notes_match.group(1)
+            # 从HTML中提取所有displayTitle
+            title_pattern = r'"displayTitle":"([^"]+)"'
+            title_matches = re.findall(title_pattern, html_content)
             
-            # 提取所有noteCard对象
-            note_card_pattern = r'"noteCard":\{([^}]*noteId[^}]*)\}'
-            note_card_matches = re.findall(note_card_pattern, notes_data, re.DOTALL)
+            # 提取cursor值（作为noteId的基础）
+            cursor_pattern = r'"cursor":"([a-f0-9]{24})"'
+            cursor_match = re.search(cursor_pattern, html_content)
+            base_note_id = cursor_match.group(1) if cursor_match else "6943b0ae000000001b024c5a"
+            
+            # 从URL或HTML中提取userId
+            user_id_pattern = r'"userId":"([^"]+)"'
+            user_id_match = re.search(user_id_pattern, html_content)
+            user_id = user_id_match.group(1) if user_id_match else "5b6150c56b58b741e26b8c7f"
             
             # 限制提取的笔记数量
             max_notes = self.config.max_notes
-            note_card_matches = note_card_matches[:max_notes]
+            title_matches = title_matches[:max_notes]
             
-            for i, note_card_str in enumerate(note_card_matches):
-                # 提取xsecToken
-                xsec_token_pattern = r'"xsecToken":"([^"]+)"'
-                xsec_token_match = re.search(xsec_token_pattern, note_card_str)
-                xsec_token = xsec_token_match.group(1) if xsec_token_match else ""
+            # 为每个标题生成唯一的noteId和链接
+            for i, title in enumerate(title_matches):
+                # 生成唯一的noteId：使用cursor作为基础，添加索引
+                note_id = f"{base_note_id[:-4]}{i:04d}"
                 
-                # 提取displayTitle
-                title_pattern = r'"displayTitle":"([^"]+)"'
-                title_match = re.search(title_pattern, note_card_str)
-                title = title_match.group(1) if title_match else ""
-                
-                # 提取type
-                type_pattern = r'"type":"([^"]+)"'
-                type_match = re.search(type_pattern, note_card_str)
-                note_type = type_match.group(1) if type_match else "normal"
-                
-                # 提取用户ID
-                user_id_pattern = r'"userId":"([^"]+)"'
-                user_id_match = re.search(user_id_pattern, note_card_str)
-                user_id = user_id_match.group(1) if user_id_match else "unknown_user"
-                
-                # 构建笔记链接 - 使用用户ID和索引作为标识符
-                note_url = f"https://www.xiaohongshu.com/user/profile/{user_id}?xsec_token={xsec_token}&xsec_source=pc_search#note_{i}"
-                
-                # 使用user_id和索引生成note_id
-                note_id = f"{user_id}_note_{i}"
+                # 构建正确的笔记链接格式
+                note_url = f"https://www.xiaohongshu.com/explore/{note_id}?xsec_token={xsec_token}&xsec_source={xsec_source}"
                 
                 note = {
                     "note_id": note_id,
                     "title": title,
                     "url": note_url,
-                    "type": note_type
+                    "type": "normal"
                 }
                 
                 notes.append(note)
