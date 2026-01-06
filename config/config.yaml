@@ -30,3 +30,28 @@ logging:
   file: "./logs/seer.log"
   max_bytes: 10485760
   backup_count: 5
+
+# Dividend rate settings
+dividend_rate:
+  data_source:
+    source: "eastmoney"  # 数据源: eastmoney, sina, tencent
+    api_timeout: 30
+    retry_times: 3
+    use_cache: true
+    cache_expire_hours: 24
+  calculation:
+    high_dividend_threshold: 4.0  # 高股息率阈值(%)
+    ttm_months: 12  # TTM计算月数
+    min_dividend_years: 3  # 最少分红年数
+    dividend_growth_threshold: 5.0  # 股息增长阈值(%)
+  filter:
+    default_min_yield: 0.0
+    default_max_yield: 100.0
+    default_min_pe: 0.0
+    default_max_pe: 1000.0
+    default_min_market_cap: 0.0
+    default_max_market_cap: 100000.0
+  storage:
+    cache_dir: "./cache/dividend"
+    data_dir: "./data/dividend"
+    enable_persistence: true
