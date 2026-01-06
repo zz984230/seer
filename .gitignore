@@ -17,3 +17,10 @@ data/5b6150c56b58b741e26b8c7f/2025-12-20/metadata.json
 logs/*.log
 
 
+logs/seer.log
+
+*.log
+
+cache/dividend/stock_name_code_mapping.json
+
+*.json

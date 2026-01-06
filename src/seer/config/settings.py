@@ -32,12 +32,20 @@ class LoggingConfig(BaseModel):
     max_bytes: int = Field(default=10485760)
     backup_count: int = Field(default=5)
 
+# 股息率配置模型（简化版，避免循环导入）
+class DividendRateConfig(BaseModel):
+    data_source: dict = Field(default_factory=dict)
+    calculation: dict = Field(default_factory=dict)
+    filter: dict = Field(default_factory=dict)
+    storage: dict = Field(default_factory=dict)
+
 # 主配置模型
 class Settings(BaseSettings):
     crawler: CrawlerConfig = Field(default_factory=CrawlerConfig)
     parser: ParserConfig = Field(default_factory=ParserConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    dividend_rate: DividendRateConfig = Field(default_factory=DividendRateConfig)
     xhs_cookies: Optional[str] = Field(default=None, alias="XHS_COOKIES")  # 从环境变量加载小红书cookies
     
     model_config = ConfigDict(
