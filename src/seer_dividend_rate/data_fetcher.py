@@ -150,10 +150,10 @@ class DataFetcher:
     
     def get_dividend_records(self, stock_code: str) -> List[DividendRecord]:
         """
-        获取股票分红记录
+        获取股票分红记录（合并年度分红和中期分红）
         
         :param stock_code: 股票代码
-        :return: 分红记录列表
+        :return: 分红记录列表（按年度合并）
         """
         cache_key = self._get_cache_key("dividend_records", stock_code=stock_code)
         cached_data = self._load_from_cache(cache_key)
@@ -182,7 +182,7 @@ class DataFetcher:
                     try:
                         year = int(report_time.split('年')[0])
                     except (ValueError, AttributeError):
-                        continue
+                        pass
                 
                 def date_to_str(date_val):
                     if pd.isna(date_val):
@@ -201,12 +201,55 @@ class DataFetcher:
                 )
                 records.append(record)
             
-            self._save_to_cache(cache_key, [record.model_dump() for record in records])
-            return records
+            merged_records = self._merge_dividend_records(records)
+            
+            self._save_to_cache(cache_key, [record.model_dump() for record in merged_records])
+            return merged_records
             
         except Exception as e:
             self.logger.error(f"获取分红记录失败: {stock_code}, 错误: {str(e)}")
             return []
+    
+    def _merge_dividend_records(self, records: List[DividendRecord]) -> List[DividendRecord]:
+        """
+        合并年度分红和中期分红
+        
+        :param records: 原始分红记录列表
+        :return: 合并后的年度分红记录列表
+        """
+        from collections import defaultdict
+        
+        year_dividends = defaultdict(list)
+        
+        for record in records:
+            year = record.year
+            if year == 0:
+                if record.payout_date:
+                    try:
+                        year = int(record.payout_date.split('-')[0])
+                    except (ValueError, AttributeError):
+                        continue
+            if year > 0:
+                year_dividends[year].append(record)
+        
+        merged_records = []
+        for year in sorted(year_dividends.keys()):
+            year_records = year_dividends[year]
+            total_dividend = sum(r.dividend_per_share for r in year_records)
+            
+            latest_record = max(year_records, key=lambda r: r.payout_date or '')
+            
+            merged_record = DividendRecord(
+                year=year,
+                dividend_per_share=round(total_dividend, 3),
+                dividend_yield=None,
+                record_date=latest_record.record_date,
+                ex_dividend_date=latest_record.ex_dividend_date,
+                payout_date=latest_record.payout_date
+            )
+            merged_records.append(merged_record)
+        
+        return merged_records
     
     def get_all_stock_list(self) -> List[str]:
         """
