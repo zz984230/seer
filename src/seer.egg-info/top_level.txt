@@ -1,1 +1,2 @@
 seer
+seer_dividend_rate

@@ -34,6 +34,12 @@ src/seer/reporter/__init__.py
 src/seer/reporter/xhs_reporter.py
 src/seer/storage/__init__.py
 src/seer/storage/data_storage.py
+src/seer_dividend_rate/__init__.py
+src/seer_dividend_rate/config.py
+src/seer_dividend_rate/data_fetcher.py
+src/seer_dividend_rate/dividend_calculator.py
+src/seer_dividend_rate/models.py
 tests/test_crawler.py
+tests/test_dividend_rate.py
 tests/test_parser.py
 tests/test_storage.py
