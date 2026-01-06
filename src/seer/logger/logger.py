@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
-from seer.config import settings
+from config import settings
 
 class Logger:
     def __init__(self):

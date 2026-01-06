@@ -24,7 +24,7 @@ from seer.analyzer import XiaohongshuAnalyzer
 from seer.reporter import XiaohongshuReporter
 from seer.storage import DataStorage
 from seer.logger import logger
-from seer.config import settings
+from config import settings
 from datetime import datetime
 
 
