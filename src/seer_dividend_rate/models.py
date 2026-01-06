@@ -13,11 +13,18 @@ class StockInfo(BaseModel):
     pb_ratio: Optional[float] = Field(None, description="市净率")
     ps_ratio: Optional[float] = Field(None, description="市销率")
     
-    @field_validator('current_price', 'market_cap', 'pe_ratio', 'pb_ratio', 'ps_ratio')
+    @field_validator('current_price', 'market_cap', 'pb_ratio', 'ps_ratio')
     @classmethod
     def validate_positive_numbers(cls, v):
         if v is not None and v < 0:
             raise ValueError('数值必须为正数')
+        return v
+    
+    @field_validator('pe_ratio')
+    @classmethod
+    def validate_pe_ratio(cls, v):
+        if v is not None and v == 0:
+            return None
         return v
 
 

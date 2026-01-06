@@ -3,10 +3,175 @@ import pandas as pd
 from typing import List, Dict, Any, Optional
 import json
 import os
+import time
 from datetime import datetime, timedelta
+from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
+from tqdm import tqdm
+import threading
 from .models import StockInfo, DividendRecord
 from .config import settings
 from seer.logger import logger
+
+tqdm.set_lock(threading.Lock())
+
+
+def _fetch_stock_indicator_worker(stock_code: str, config_dict: Dict[str, Any], cache_dir: str) -> Optional[Dict[str, Any]]:
+    """
+    工作进程函数：获取单个股票的估值指标
+    
+    :param stock_code: 股票代码
+    :param config_dict: 配置字典
+    :param cache_dir: 缓存目录
+    :return: 股票信息字典
+    """
+    try:
+        cache_key = f"stock_indicator_stock_code_{stock_code}"
+        cache_path = os.path.join(cache_dir, f"{cache_key}.json")
+        
+        if os.path.exists(cache_path):
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+            
+            cache_time = datetime.fromisoformat(cache_data['timestamp'])
+            expire_time = cache_time + timedelta(hours=config_dict['cache_expire_hours'])
+            
+            if datetime.now() <= expire_time:
+                return cache_data['data']
+            else:
+                os.remove(cache_path)
+        
+        time.sleep(config_dict['request_interval'])
+        
+        df = ak.stock_zh_a_spot_em()
+        stock_data = df[df['代码'] == stock_code]
+        
+        if stock_data.empty:
+            return None
+        
+        latest = stock_data.iloc[0]
+        
+        pe_ratio = latest.get('市盈率-动态')
+        if pe_ratio is not None:
+            try:
+                pe_ratio = float(pe_ratio)
+                if pe_ratio <= 0:
+                    pe_ratio = None
+            except (ValueError, TypeError):
+                pe_ratio = None
+        
+        stock_info = {
+            'stock_code': stock_code,
+            'stock_name': latest.get('名称', ''),
+            'current_price': float(latest.get('最新价', 0)),
+            'market_cap': float(latest.get('总市值', 0)) / 100000000 if latest.get('总市值') else None,
+            'pe_ratio': pe_ratio,
+            'pb_ratio': float(latest.get('市净率', 0)) if latest.get('市净率') else None,
+            'ps_ratio': None
+        }
+        
+        cache_data = {
+            'timestamp': datetime.now().isoformat(),
+            'data': stock_info
+        }
+        
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, 'w', encoding='utf-8') as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        
+        return stock_info
+        
+    except Exception as e:
+        return None
+
+
+def _fetch_dividend_records_worker(stock_code: str, config_dict: Dict[str, Any], cache_dir: str) -> Optional[List[Dict[str, Any]]]:
+    """
+    工作进程函数：获取单个股票的分红记录
+    
+    :param stock_code: 股票代码
+    :param config_dict: 配置字典
+    :param cache_dir: 缓存目录
+    :return: 分红记录列表
+    """
+    try:
+        cache_key = f"dividend_records_stock_code_{stock_code}"
+        cache_path = os.path.join(cache_dir, f"{cache_key}.json")
+        
+        if os.path.exists(cache_path):
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+            
+            cache_time = datetime.fromisoformat(cache_data['timestamp'])
+            expire_time = cache_time + timedelta(hours=config_dict['cache_expire_hours'])
+            
+            if datetime.now() <= expire_time:
+                return cache_data['data']
+            else:
+                os.remove(cache_path)
+        
+        time.sleep(config_dict['request_interval'])
+        
+        df = ak.stock_dividend_cninfo(symbol=stock_code)
+        
+        if df.empty:
+            return None
+        
+        yearly_dividends = {}
+        
+        for _, row in df.iterrows():
+            dividend_ratio = row.get('派息比例', 0)
+            if pd.isna(dividend_ratio) or dividend_ratio == 0:
+                continue
+            
+            report_time = row.get('报告时间', '')
+            year = 0
+            if report_time:
+                try:
+                    year = int(report_time[:4])
+                except (ValueError, IndexError):
+                    continue
+            
+            if year == 0:
+                continue
+            
+            if year not in yearly_dividends:
+                yearly_dividends[year] = {
+                    'year': year,
+                    'dividend_per_share': 0.0,
+                    'record_date': None,
+                    'ex_dividend_date': None,
+                    'payout_date': None
+                }
+            
+            yearly_dividends[year]['dividend_per_share'] += float(dividend_ratio)
+            
+            record_date = row.get('实施方案公告日期', '')
+            if record_date and not yearly_dividends[year]['record_date']:
+                yearly_dividends[year]['record_date'] = record_date
+            
+            ex_date = row.get('除权除息日', '')
+            if ex_date and not yearly_dividends[year]['ex_dividend_date']:
+                yearly_dividends[year]['ex_dividend_date'] = ex_date
+            
+            payout_date = row.get('派息日', '')
+            if payout_date and not yearly_dividends[year]['payout_date']:
+                yearly_dividends[year]['payout_date'] = payout_date
+        
+        records = [yearly_dividends[year] for year in sorted(yearly_dividends.keys(), reverse=True)]
+        
+        cache_data = {
+            'timestamp': datetime.now().isoformat(),
+            'data': records
+        }
+        
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, 'w', encoding='utf-8') as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        
+        return records
+        
+    except Exception as e:
+        return None
 
 
 class DataFetcher:
@@ -89,6 +254,8 @@ class DataFetcher:
         try:
             self.logger.info(f"获取股票估值指标: {stock_code}")
             
+            time.sleep(self.config.request_interval)
+            
             df = ak.stock_zh_a_spot_em()
             
             stock_data = df[df['代码'] == stock_code]
@@ -99,12 +266,21 @@ class DataFetcher:
             
             latest = stock_data.iloc[0]
             
+            pe_ratio = latest.get('市盈率-动态')
+            if pe_ratio is not None:
+                try:
+                    pe_ratio = float(pe_ratio)
+                    if pe_ratio <= 0:
+                        pe_ratio = None
+                except (ValueError, TypeError):
+                    pe_ratio = None
+            
             stock_info = StockInfo(
                 stock_code=stock_code,
                 stock_name=latest.get('名称', ''),
                 current_price=float(latest.get('最新价', 0)),
                 market_cap=float(latest.get('总市值', 0)) / 100000000 if latest.get('总市值') else None,
-                pe_ratio=float(latest.get('市盈率-动态', 0)) if latest.get('市盈率-动态') else None,
+                pe_ratio=pe_ratio,
                 pb_ratio=float(latest.get('市净率', 0)) if latest.get('市净率') else None,
                 ps_ratio=None
             )
@@ -131,6 +307,8 @@ class DataFetcher:
         
         try:
             self.logger.info(f"获取股票实时行情: {stock_code}")
+            
+            time.sleep(self.config.request_interval)
             
             df = ak.stock_zh_a_spot_em()
             
@@ -163,6 +341,8 @@ class DataFetcher:
         
         try:
             self.logger.info(f"获取股票分红记录: {stock_code}")
+            
+            time.sleep(self.config.request_interval)
             
             df = ak.stock_dividend_cninfo(symbol=stock_code)
             
@@ -260,6 +440,8 @@ class DataFetcher:
         try:
             self.logger.info("获取所有A股股票列表")
             
+            time.sleep(self.config.request_interval)
+            
             df = ak.stock_zh_a_spot_em()
             stock_codes = df['代码'].tolist()
             
@@ -284,6 +466,8 @@ class DataFetcher:
         
         try:
             self.logger.info("获取股票名称和代码映射")
+            
+            time.sleep(self.config.request_interval)
             
             df = ak.stock_zh_a_spot_em()
             
@@ -332,17 +516,32 @@ class DataFetcher:
     
     def get_batch_stock_indicators(self, stock_codes: List[str]) -> List[StockInfo]:
         """
-        批量获取股票估值指标
+        批量获取股票估值指标（进程池并发拉取）
         
         :param stock_codes: 股票代码列表
         :return: StockInfo对象列表
         """
         results = []
+        config_dict = self.config.model_dump()
         
-        for stock_code in stock_codes:
-            stock_info = self.get_stock_indicator(stock_code)
-            if stock_info:
-                results.append(stock_info)
+        with ProcessPoolExecutor(max_workers=self.config.max_workers) as executor:
+            future_to_code = {
+                executor.submit(_fetch_stock_indicator_worker, stock_code, config_dict, self.cache_dir): stock_code
+                for stock_code in stock_codes
+            }
+            
+            with tqdm(total=len(stock_codes), desc="批量获取股票指标", unit="只") as pbar:
+                for future in as_completed(future_to_code):
+                    stock_code = future_to_code[future]
+                    try:
+                        stock_info_dict = future.result()
+                        if stock_info_dict:
+                            stock_info = StockInfo(**stock_info_dict)
+                            results.append(stock_info)
+                    except Exception as e:
+                        self.logger.error(f"获取股票指标失败: {stock_code}, 错误: {str(e)}")
+                    finally:
+                        pbar.update(1)
         
         self.logger.info(f"批量获取股票指标完成: {len(results)}/{len(stock_codes)}")
         return results

@@ -11,6 +11,8 @@ class DividendDataSourceConfig(BaseModel):
     retry_times: int = Field(default=3, description="重试次数")
     use_cache: bool = Field(default=True, description="是否使用缓存")
     cache_expire_hours: int = Field(default=24, description="缓存过期时间(小时)")
+    max_workers: int = Field(default=20, description="并发工作进程数")
+    request_interval: float = Field(default=0.5, description="请求间隔(秒)")
 
 
 class DividendCalculationConfig(BaseModel):

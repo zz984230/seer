@@ -1,6 +1,8 @@
 README.md
 pyproject.toml
 src/main.py
+src/config/__init__.py
+src/config/settings.py
 src/seer/__init__.py
 src/seer.egg-info/PKG-INFO
 src/seer.egg-info/SOURCES.txt
@@ -11,8 +13,6 @@ src/seer/analyzer/__init__.py
 src/seer/analyzer/xhs_analyzer.py
 src/seer/cleaner/__init__.py
 src/seer/cleaner/xhs_cleaner.py
-src/seer/config/__init__.py
-src/seer/config/settings.py
 src/seer/crawler/__init__.py
 src/seer/crawler/anti_crawler.py
 src/seer/crawler/spider_xhs.py

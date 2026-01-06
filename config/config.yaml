@@ -39,6 +39,8 @@ dividend_rate:
     retry_times: 3
     use_cache: true
     cache_expire_hours: 24
+    max_workers: 20  # 并发工作进程数（进程池可以安全使用更高的并发数）
+    request_interval: 0.5  # 请求间隔（秒）
   calculation:
     high_dividend_threshold: 4.0  # 高股息率阈值(%)
     ttm_months: 12  # TTM计算月数

@@ -1,13 +1,78 @@
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from datetime import datetime
+from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
+from tqdm import tqdm
+import threading
 from .models import (
     StockInfo, DividendRecord, DividendYield, 
     DividendTrend, StockFilter, DividendAnalysisResult, BatchDividendResult
 )
-from .data_fetcher import DataFetcher
+from .data_fetcher import DataFetcher, _fetch_stock_indicator_worker, _fetch_dividend_records_worker
 from .config import settings
 from seer.logger import logger
+
+tqdm.set_lock(threading.Lock())
+
+
+def _calculate_dividend_yield_worker(stock_identifier: str, config_dict: Dict[str, Any], cache_dir: str, name_code_mapping: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    """
+    工作进程函数：计算单个股票的股息率
+    
+    :param stock_identifier: 股票名称或代码
+    :param config_dict: 配置字典
+    :param cache_dir: 缓存目录
+    :param name_code_mapping: 名称到代码的映射
+    :return: 股息率字典
+    """
+    try:
+        stock_code = stock_identifier
+        if not stock_identifier.isdigit():
+            stock_code = name_code_mapping.get(stock_identifier)
+            if not stock_code:
+                return None
+        
+        stock_info_dict = _fetch_stock_indicator_worker(stock_code, config_dict, cache_dir)
+        if not stock_info_dict:
+            return None
+        
+        dividend_records_dict = _fetch_dividend_records_worker(stock_code, config_dict, cache_dir)
+        if not dividend_records_dict:
+            return None
+        
+        recent_dividend = dividend_records_dict[0] if dividend_records_dict else None
+        if not recent_dividend:
+            return None
+        
+        dividend_per_share = recent_dividend.get('dividend_per_share', 0)
+        current_price = stock_info_dict.get('current_price', 0)
+        
+        if current_price <= 0:
+            return None
+        
+        dividend_yield = (dividend_per_share / current_price) * 100
+        
+        dividend_records = [
+            DividendRecord(**record_dict) 
+            for record_dict in dividend_records_dict
+        ]
+        
+        result = {
+            'stock_code': stock_code,
+            'stock_name': stock_info_dict.get('stock_name', ''),
+            'current_price': current_price,
+            'dividend_yield': dividend_yield,
+            'annual_dividend': dividend_per_share,
+            'dividend_records': dividend_records,
+            'pe_ratio': stock_info_dict.get('pe_ratio'),
+            'pb_ratio': stock_info_dict.get('pb_ratio'),
+            'market_cap': stock_info_dict.get('market_cap')
+        }
+        
+        return result
+        
+    except Exception as e:
+        return None
 
 
 class DividendCalculator:
@@ -247,7 +312,7 @@ class DividendCalculator:
     
     def get_batch_dividend_yields(self, stock_identifiers: List[str]) -> BatchDividendResult:
         """
-        批量获取股息率
+        批量获取股息率（进程池并发拉取）
         
         :param stock_identifiers: 股票名称或代码列表
         :return: BatchDividendResult对象
@@ -255,15 +320,30 @@ class DividendCalculator:
         self.logger.info(f"批量获取股息率: {len(stock_identifiers)}只股票")
         
         dividend_yields = []
+        max_workers = settings.data_source.max_workers
+        config_dict = settings.data_source.model_dump()
+        cache_dir = settings.storage.cache_dir
         
-        for stock_identifier in stock_identifiers:
-            try:
-                dividend_yield = self.calculate_dividend_yield(stock_identifier)
-                if dividend_yield:
-                    dividend_yields.append(dividend_yield)
-            except Exception as e:
-                self.logger.error(f"获取股息率失败: {stock_identifier}, 错误: {str(e)}")
-                continue
+        if self._name_code_mapping is None:
+            self._name_code_mapping = self.fetcher.get_stock_name_code_mapping()
+        
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            future_to_identifier = {
+                executor.submit(_calculate_dividend_yield_worker, stock_identifier, config_dict, cache_dir, self._name_code_mapping): stock_identifier
+                for stock_identifier in stock_identifiers
+            }
+            
+            with tqdm(total=len(stock_identifiers), desc="获取股息率", unit="只") as pbar:
+                for future in as_completed(future_to_identifier):
+                    stock_identifier = future_to_identifier[future]
+                    try:
+                        dividend_yield_dict = future.result()
+                        if dividend_yield_dict:
+                            dividend_yields.append(DividendYield(**dividend_yield_dict))
+                    except Exception as e:
+                        self.logger.error(f"获取股息率失败: {stock_identifier}, 错误: {str(e)}")
+                    finally:
+                        pbar.update(1)
         
         if not dividend_yields:
             return BatchDividendResult(
@@ -299,7 +379,7 @@ class DividendCalculator:
     
     def get_high_dividend_stocks(self, stock_identifiers: Optional[List[str]] = None, threshold: Optional[float] = None) -> List[DividendYield]:
         """
-        获取高股息率股票
+        获取高股息率股票（进程池并发拉取）
         
         :param stock_identifiers: 股票名称或代码列表，如果为None则获取所有股票
         :param threshold: 股息率阈值，如果为None则使用配置中的阈值
@@ -314,15 +394,32 @@ class DividendCalculator:
             self.logger.info(f"获取高股息率股票: 阈值={threshold}%, 股票数={len(stock_identifiers)}")
             
             high_dividend_stocks = []
+            max_workers = settings.data_source.max_workers
+            config_dict = settings.data_source.model_dump()
+            cache_dir = settings.storage.cache_dir
             
-            for stock_identifier in stock_identifiers:
-                try:
-                    dividend_yield = self.calculate_dividend_yield(stock_identifier)
-                    if dividend_yield and dividend_yield.dividend_yield >= threshold:
-                        high_dividend_stocks.append(dividend_yield)
-                except Exception as e:
-                    self.logger.error(f"处理股票失败: {stock_identifier}, 错误: {str(e)}")
-                    continue
+            if self._name_code_mapping is None:
+                self._name_code_mapping = self.fetcher.get_stock_name_code_mapping()
+            
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                future_to_identifier = {
+                    executor.submit(_calculate_dividend_yield_worker, stock_identifier, config_dict, cache_dir, self._name_code_mapping): stock_identifier
+                    for stock_identifier in stock_identifiers
+                }
+                
+                with tqdm(total=len(stock_identifiers), desc="筛选高股息股票", unit="只") as pbar:
+                    for future in as_completed(future_to_identifier):
+                        stock_identifier = future_to_identifier[future]
+                        try:
+                            dividend_yield_dict = future.result()
+                            if dividend_yield_dict:
+                                dividend_yield = DividendYield(**dividend_yield_dict)
+                                if dividend_yield.dividend_yield >= threshold:
+                                    high_dividend_stocks.append(dividend_yield)
+                        except Exception as e:
+                            self.logger.error(f"处理股票失败: {stock_identifier}, 错误: {str(e)}")
+                        finally:
+                            pbar.update(1)
             
             high_dividend_stocks.sort(key=lambda x: x.dividend_yield, reverse=True)
             
