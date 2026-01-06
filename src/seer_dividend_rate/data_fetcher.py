@@ -212,6 +212,66 @@ class DataFetcher:
             self.logger.error(f"获取股票列表失败: {str(e)}")
             return []
     
+    def get_stock_name_code_mapping(self) -> Dict[str, str]:
+        """
+        获取股票名称到代码的映射
+        
+        :return: 股票名称到代码的映射字典
+        """
+        cache_key = self._get_cache_key("stock_name_code_mapping")
+        cached_data = self._load_from_cache(cache_key)
+        
+        if cached_data:
+            return cached_data
+        
+        try:
+            self.logger.info("获取股票名称和代码映射")
+            
+            df = ak.stock_zh_a_spot_em()
+            
+            mapping = {}
+            for _, row in df.iterrows():
+                stock_name = row.get('名称', '')
+                stock_code = row.get('代码', '')
+                if stock_name and stock_code:
+                    mapping[stock_name] = stock_code
+            
+            self._save_to_cache(cache_key, mapping)
+            return mapping
+            
+        except Exception as e:
+            self.logger.error(f"获取股票名称和代码映射失败: {str(e)}")
+            return {}
+    
+    def get_code_from_name(self, stock_name: str) -> Optional[str]:
+        """
+        根据股票名称获取股票代码
+        
+        :param stock_name: 股票名称
+        :return: 股票代码，如果未找到则返回None
+        """
+        try:
+            mapping = self.get_stock_name_code_mapping()
+            return mapping.get(stock_name)
+        except Exception as e:
+            self.logger.error(f"根据名称获取代码失败: {stock_name}, 错误: {str(e)}")
+            return None
+    
+    def get_name_from_code(self, stock_code: str) -> Optional[str]:
+        """
+        根据股票代码获取股票名称
+        
+        :param stock_code: 股票代码
+        :return: 股票名称，如果未找到则返回None
+        """
+        try:
+            mapping = self.get_stock_name_code_mapping()
+            code_to_name = {v: k for k, v in mapping.items()}
+            return code_to_name.get(stock_code)
+        except Exception as e:
+            self.logger.error(f"根据代码获取名称失败: {stock_code}, 错误: {str(e)}")
+            return None
+    
     def get_batch_stock_indicators(self, stock_codes: List[str]) -> List[StockInfo]:
         """
         批量获取股票估值指标
