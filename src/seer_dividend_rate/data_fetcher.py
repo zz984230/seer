@@ -89,22 +89,24 @@ class DataFetcher:
         try:
             self.logger.info(f"获取股票估值指标: {stock_code}")
             
-            df = ak.stock_a_indicator(symbol=stock_code)
+            df = ak.stock_zh_a_spot_em()
             
-            if df.empty:
+            stock_data = df[df['代码'] == stock_code]
+            
+            if stock_data.empty:
                 self.logger.warning(f"未获取到股票数据: {stock_code}")
                 return None
             
-            latest = df.iloc[0]
+            latest = stock_data.iloc[0]
             
             stock_info = StockInfo(
                 stock_code=stock_code,
-                stock_name=latest.get('股票名称', ''),
+                stock_name=latest.get('名称', ''),
                 current_price=float(latest.get('最新价', 0)),
                 market_cap=float(latest.get('总市值', 0)) / 100000000 if latest.get('总市值') else None,
                 pe_ratio=float(latest.get('市盈率-动态', 0)) if latest.get('市盈率-动态') else None,
                 pb_ratio=float(latest.get('市净率', 0)) if latest.get('市净率') else None,
-                ps_ratio=float(latest.get('市销率', 0)) if latest.get('市销率') else None
+                ps_ratio=None
             )
             
             self._save_to_cache(cache_key, stock_info.model_dump())
@@ -162,7 +164,7 @@ class DataFetcher:
         try:
             self.logger.info(f"获取股票分红记录: {stock_code}")
             
-            df = ak.stock_dividend_detail_sina(symbol=stock_code)
+            df = ak.stock_dividend_cninfo(symbol=stock_code)
             
             if df.empty:
                 self.logger.warning(f"未获取到分红记录: {stock_code}")
@@ -170,13 +172,32 @@ class DataFetcher:
             
             records = []
             for _, row in df.iterrows():
+                dividend_ratio = row.get('派息比例', 0)
+                if pd.isna(dividend_ratio) or dividend_ratio == 0:
+                    continue
+                
+                report_time = row.get('报告时间', '')
+                year = 0
+                if report_time:
+                    try:
+                        year = int(report_time.split('年')[0])
+                    except (ValueError, AttributeError):
+                        continue
+                
+                def date_to_str(date_val):
+                    if pd.isna(date_val):
+                        return None
+                    if isinstance(date_val, str):
+                        return date_val
+                    return str(date_val)
+                
                 record = DividendRecord(
-                    year=int(row.get('年度', 0)),
-                    dividend_per_share=float(row.get('每10股派息', 0)) / 10,
+                    year=year,
+                    dividend_per_share=float(dividend_ratio) / 10,
                     dividend_yield=None,
-                    record_date=row.get('股权登记日'),
-                    ex_dividend_date=row.get('除权除息日'),
-                    payout_date=row.get('派息日')
+                    record_date=date_to_str(row.get('股权登记日')),
+                    ex_dividend_date=date_to_str(row.get('除权日')),
+                    payout_date=date_to_str(row.get('派息日'))
                 )
                 records.append(record)
             
@@ -288,31 +309,6 @@ class DataFetcher:
         
         self.logger.info(f"批量获取股票指标完成: {len(results)}/{len(stock_codes)}")
         return results
-    
-    def get_dividend_yield_from_indicator(self, stock_code: str) -> Optional[float]:
-        """
-        从估值指标中获取股息率
-        
-        :param stock_code: 股票代码
-        :return: 股息率(%)
-        """
-        try:
-            df = ak.stock_a_indicator(symbol=stock_code)
-            
-            if df.empty:
-                return None
-            
-            latest = df.iloc[0]
-            dividend_yield = latest.get('股息率', None)
-            
-            if dividend_yield is not None:
-                return float(dividend_yield)
-            
-            return None
-            
-        except Exception as e:
-            self.logger.error(f"获取股息率失败: {stock_code}, 错误: {str(e)}")
-            return None
     
     def clear_cache(self, stock_code: Optional[str] = None):
         """

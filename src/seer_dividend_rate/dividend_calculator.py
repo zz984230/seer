@@ -145,7 +145,9 @@ class DividendCalculator:
             if not dividend_records:
                 return None
             
-            recent_records = dividend_records[:years]
+            sorted_records = sorted(dividend_records, key=lambda x: x.year, reverse=True)
+            recent_records = sorted_records[:years]
+            recent_records = sorted(recent_records, key=lambda x: x.year, reverse=False)
             
             years_list = [record.year for record in recent_records]
             dividends_per_share = [record.dividend_per_share for record in recent_records]

@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 from seer_dividend_rate import (
     get_dividend_yield,
     get_batch_dividend_yields,
@@ -160,6 +161,12 @@ def handle_trend(stock_code: str, years: int):
         print(f"股票名称: {trend.stock_name}")
         print(f"平均股息率: {trend.avg_dividend_yield}%")
         print(f"股息增长率: {trend.dividend_growth_rate}%")
+        
+        if trend.years:
+            print(f"\n数据范围: {trend.years[0]}年 至 {trend.years[-1]}年 (共{len(trend.years)}年)")
+            if trend.years[-1] < datetime.now().year - 1:
+                print(f"注意: 最新数据为{trend.years[-1]}年，{trend.years[-1]+1}年及以后的分红数据尚未发布")
+        
         print("\n历年股息率:")
         print("-" * 60)
         
