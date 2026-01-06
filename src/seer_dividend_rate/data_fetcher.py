@@ -215,32 +215,26 @@ class DataFetcher:
         合并年度分红和中期分红
         
         :param records: 原始分红记录列表
-        :return: 合并后的年度分红记录列表
+        :return: 合并后的年度分红记录列表（年份为财年）
         """
         from collections import defaultdict
         
-        year_dividends = defaultdict(list)
+        fiscal_year_dividends = defaultdict(list)
         
         for record in records:
-            year = record.year
-            if year == 0:
-                if record.payout_date:
-                    try:
-                        year = int(record.payout_date.split('-')[0])
-                    except (ValueError, AttributeError):
-                        continue
-            if year > 0:
-                year_dividends[year].append(record)
+            fiscal_year = record.year
+            if fiscal_year > 0:
+                fiscal_year_dividends[fiscal_year].append(record)
         
         merged_records = []
-        for year in sorted(year_dividends.keys()):
-            year_records = year_dividends[year]
+        for fiscal_year in sorted(fiscal_year_dividends.keys()):
+            year_records = fiscal_year_dividends[fiscal_year]
             total_dividend = sum(r.dividend_per_share for r in year_records)
             
             latest_record = max(year_records, key=lambda r: r.payout_date or '')
             
             merged_record = DividendRecord(
-                year=year,
+                year=fiscal_year,
                 dividend_per_share=round(total_dividend, 3),
                 dividend_yield=None,
                 record_date=latest_record.record_date,
