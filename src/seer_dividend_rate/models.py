@@ -106,6 +106,7 @@ class DividendAnalysisResult(BaseModel):
 
 class BatchDividendResult(BaseModel):
     total_stocks: int = Field(..., description="总股票数")
+    dividend_yields: List[DividendYield] = Field(default_factory=list, description="股息率列表")
     high_dividend_stocks: List[DividendYield] = Field(default_factory=list, description="高股息股票列表")
     avg_dividend_yield: float = Field(..., description="平均股息率(%)")
     max_dividend_yield: float = Field(..., description="最高股息率(%)")

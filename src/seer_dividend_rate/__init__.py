@@ -38,7 +38,7 @@ def get_dividend_yield(stock_code: str):
     """
     获取单只股票的股息率
     
-    :param stock_code: 股票代码
+    :param stock_code: 股票代码或名称
     :return: DividendYield对象
     """
     return calculator.calculate_dividend_yield(stock_code)
@@ -48,7 +48,7 @@ def get_batch_dividend_yields(stock_codes: list):
     """
     批量获取股息率
     
-    :param stock_codes: 股票代码列表
+    :param stock_codes: 股票代码或名称列表
     :return: BatchDividendResult对象
     """
     return calculator.get_batch_dividend_yields(stock_codes)
@@ -58,7 +58,7 @@ def get_high_dividend_stocks(stock_codes: list = None, threshold: float = None):
     """
     获取高股息率股票
     
-    :param stock_codes: 股票代码列表
+    :param stock_codes: 股票代码或名称列表
     :param threshold: 股息率阈值
     :return: 高股息率股票列表
     """
@@ -69,7 +69,7 @@ def get_dividend_trend(stock_code: str, years: int = 5):
     """
     获取股息率趋势
     
-    :param stock_code: 股票代码
+    :param stock_code: 股票代码或名称
     :param years: 分析年数
     :return: DividendTrend对象
     """
@@ -80,7 +80,7 @@ def calculate_custom_yield(stock_code: str, dividend_amount: float):
     """
     自定义股息率计算
     
-    :param stock_code: 股票代码
+    :param stock_code: 股票代码或名称
     :param dividend_amount: 自定义分红金额
     :return: DividendYield对象
     """
@@ -91,7 +91,7 @@ def analyze_dividend(stock_code: str):
     """
     综合分析股息率
     
-    :param stock_code: 股票代码
+    :param stock_code: 股票代码或名称
     :return: DividendAnalysisResult对象
     """
     return calculator.analyze_dividend(stock_code)

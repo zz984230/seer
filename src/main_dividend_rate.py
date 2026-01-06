@@ -17,30 +17,30 @@ def main():
     
     # 单只股票股息率命令
     single_parser = subparsers.add_parser("single", help="获取单只股票的股息率")
-    single_parser.add_argument("stock_code", type=str, help="股票代码（如：600519）")
+    single_parser.add_argument("stock_code", type=str, help="股票代码或名称（如：600519 或 贵州茅台）")
     
     # 批量股息率命令
     batch_parser = subparsers.add_parser("batch", help="批量获取股票股息率")
-    batch_parser.add_argument("stock_codes", type=str, nargs="+", help="股票代码列表（如：600519 000858 600036）")
+    batch_parser.add_argument("stock_codes", type=str, nargs="+", help="股票代码或名称列表（如：600519 贵州茅台 000858）")
     
     # 高股息率股票命令
     high_parser = subparsers.add_parser("high", help="获取高股息率股票")
-    high_parser.add_argument("--stock-codes", type=str, nargs="+", help="股票代码列表（可选）")
+    high_parser.add_argument("--stock-codes", type=str, nargs="+", help="股票代码或名称列表（可选）")
     high_parser.add_argument("--threshold", type=float, default=4.0, help="股息率阈值（默认：4.0%）")
     
     # 股息率趋势命令
     trend_parser = subparsers.add_parser("trend", help="获取股息率趋势")
-    trend_parser.add_argument("stock_code", type=str, help="股票代码")
+    trend_parser.add_argument("stock_code", type=str, help="股票代码或名称")
     trend_parser.add_argument("--years", type=int, default=5, help="分析年数（默认：5年）")
     
     # 自定义股息率计算命令
     custom_parser = subparsers.add_parser("custom", help="自定义股息率计算")
-    custom_parser.add_argument("stock_code", type=str, help="股票代码")
+    custom_parser.add_argument("stock_code", type=str, help="股票代码或名称")
     custom_parser.add_argument("dividend_amount", type=float, help="自定义分红金额")
     
     # 综合分析命令
     analyze_parser = subparsers.add_parser("analyze", help="综合分析股息率")
-    analyze_parser.add_argument("stock_code", type=str, help="股票代码")
+    analyze_parser.add_argument("stock_code", type=str, help="股票代码或名称")
     
     args = parser.parse_args()
     
@@ -230,19 +230,24 @@ if __name__ == "__main__":
     print("\n使用说明：")
     print("  python src/main_dividend_rate.py <命令> [参数]\n")
     print("可用命令：")
-    print("  single <股票代码>              - 获取单只股票的股息率")
-    print("  batch <股票代码列表>          - 批量获取股票股息率")
-    print("  high [--threshold <阈值>]      - 获取高股息率股票")
-    print("  trend <股票代码> [--years <年数>] - 获取股息率趋势")
-    print("  custom <股票代码> <分红金额>   - 自定义股息率计算")
-    print("  analyze <股票代码>             - 综合分析股息率\n")
+    print("  single <股票代码或名称>              - 获取单只股票的股息率")
+    print("  batch <股票代码或名称列表>          - 批量获取股票股息率")
+    print("  high [--threshold <阈值>]           - 获取高股息率股票")
+    print("  trend <股票代码或名称> [--years <年数>] - 获取股息率趋势")
+    print("  custom <股票代码或名称> <分红金额>   - 自定义股息率计算")
+    print("  analyze <股票代码或名称>             - 综合分析股息率\n")
+    print("说明：支持使用股票代码（如：600519）或股票名称（如：贵州茅台）\n")
     print("示例：")
     print("  python src/main_dividend_rate.py single 600519")
-    print("  python src/main_dividend_rate.py batch 600519 000858 600036")
+    print("  python src/main_dividend_rate.py single 贵州茅台")
+    print("  python src/main_dividend_rate.py batch 600519 贵州茅台 000858")
     print("  python src/main_dividend_rate.py high --threshold 4.0")
     print("  python src/main_dividend_rate.py trend 600519 --years 5")
+    print("  python src/main_dividend_rate.py trend 贵州茅台 --years 5")
     print("  python src/main_dividend_rate.py custom 600519 25.0")
+    print("  python src/main_dividend_rate.py custom 贵州茅台 25.0")
     print("  python src/main_dividend_rate.py analyze 600519")
+    print("  python src/main_dividend_rate.py analyze 贵州茅台")
     print("=" * 60 + "\n")
     
     main()

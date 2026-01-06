@@ -266,6 +266,7 @@ class DividendCalculator:
         if not dividend_yields:
             return BatchDividendResult(
                 total_stocks=len(stock_identifiers),
+                dividend_yields=[],
                 high_dividend_stocks=[],
                 avg_dividend_yield=0.0,
                 max_dividend_yield=0.0,
@@ -284,6 +285,7 @@ class DividendCalculator:
         
         result = BatchDividendResult(
             total_stocks=len(stock_identifiers),
+            dividend_yields=dividend_yields,
             high_dividend_stocks=high_dividend_stocks,
             avg_dividend_yield=round(avg_yield, 2),
             max_dividend_yield=round(max_yield, 2),
