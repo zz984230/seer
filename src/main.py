@@ -1,3 +1,19 @@
+"""
+小红书爬虫应用主入口
+
+本模块是小红书爬虫应用的主入口，负责：
+1. 爬取小红书用户主页的笔记数据
+2. 数据清洗和格式化
+3. 数据分析和统计
+4. 生成分析报告
+
+使用方法：
+    python src/main.py --url <小红书用户主页URL> [--max-notes <最大笔记数>]
+
+示例：
+    python src/main.py --url https://www.xiaohongshu.com/user/profile/1234567890 --max-notes 10
+"""
+
 import argparse
 import os
 import json
