@@ -112,8 +112,7 @@ def handle_batch(stock_codes: list):
         print("-" * 60)
         
         for dividend_yield in result.dividend_yields:
-            print(f"{dividend_yield.stock_code} {dividend_yield.stock_name}: "
-                  f"{dividend_yield.dividend_yield}% (股价: {dividend_yield.current_price}元)")
+            print(f"{dividend_yield.stock_code} {dividend_yield.stock_name} (股价: {dividend_yield.current_price}元)")
         
         print("=" * 60)
         logger.info(f"批量获取成功")
@@ -135,10 +134,10 @@ def handle_high(stock_codes: list, threshold: float):
         print(f"找到 {len(high_dividend_stocks)} 只高股息率股票\n")
         
         for stock in high_dividend_stocks:
-            print(f"{stock.stock_code} {stock.stock_name}: {stock.dividend_yield}%")
-            print(f"  当前股价: {stock.current_price}元")
-            print(f"  年度每股股息: {stock.annual_dividend}元")
-            print(f"  TTM股息率: {stock.ttm_dividend_yield}%")
+            print(f"{stock.stock_code} {stock.stock_name}")
+            print(f"  当前股价: {stock.current_price:.2f}元")
+            print(f"  年度每股股息: {stock.annual_dividend:.2f}元")
+            print(f"  TTM股息率: {stock.ttm_dividend_yield:.2f}%" if stock.ttm_dividend_yield else "  TTM股息率: None%")
             print("-" * 60)
         
         logger.info(f"找到 {len(high_dividend_stocks)} 只高股息率股票")

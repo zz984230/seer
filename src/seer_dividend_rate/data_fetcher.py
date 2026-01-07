@@ -407,7 +407,7 @@ class DataFetcher:
                 fiscal_year_dividends[fiscal_year].append(record)
         
         merged_records = []
-        for fiscal_year in sorted(fiscal_year_dividends.keys()):
+        for fiscal_year in sorted(fiscal_year_dividends.keys(), reverse=True):
             year_records = fiscal_year_dividends[fiscal_year]
             total_dividend = sum(r.dividend_per_share for r in year_records)
             

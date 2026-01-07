@@ -57,12 +57,17 @@ def _calculate_dividend_yield_worker(stock_identifier: str, config_dict: Dict[st
             for record_dict in dividend_records_dict
         ]
         
+        ttm_dividend_yield = None
+        if dividend_records and current_price > 0:
+            ttm_dividend_yield = round((dividend_per_share / current_price) * 100, 2)
+        
         result = {
             'stock_code': stock_code,
             'stock_name': stock_info_dict.get('stock_name', ''),
             'current_price': current_price,
             'dividend_yield': dividend_yield,
             'annual_dividend': dividend_per_share,
+            'ttm_dividend_yield': ttm_dividend_yield,
             'dividend_records': dividend_records,
             'pe_ratio': stock_info_dict.get('pe_ratio'),
             'pb_ratio': stock_info_dict.get('pb_ratio'),
@@ -164,7 +169,9 @@ class DividendCalculator:
         """
         计算TTM（过去12个月）股息率
         
-        :param dividend_records: 分红记录列表
+        对于A股，由于分红是年度的，TTM股息率使用最新的年度分红数据
+        
+        :param dividend_records: 分红记录列表（按年份降序排列）
         :param current_price: 当前股价
         :return: TTM股息率(%)
         """
@@ -172,14 +179,8 @@ class DividendCalculator:
             return None
         
         try:
-            current_year = datetime.now().year
-            ttm_dividend = 0.0
-            
-            for record in dividend_records:
-                if record.year >= current_year - 1:
-                    ttm_dividend += record.dividend_per_share
-            
-            ttm_yield = (ttm_dividend / current_price) * 100
+            latest_dividend = dividend_records[0].dividend_per_share
+            ttm_yield = (latest_dividend / current_price) * 100
             return ttm_yield
             
         except Exception as e:
@@ -248,15 +249,15 @@ class DividendCalculator:
         """
         计算股息增长率
         
-        :param dividends: 分红金额列表
+        :param dividends: 分红金额列表（按时间升序排列）
         :return: 增长率(%)
         """
         if len(dividends) < 2:
             return None
         
         try:
-            first_dividend = dividends[-1]
-            last_dividend = dividends[0]
+            first_dividend = dividends[0]
+            last_dividend = dividends[-1]
             
             if first_dividend <= 0:
                 return None
