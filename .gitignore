@@ -24,3 +24,5 @@ logs/seer.log
 cache/dividend/stock_name_code_mapping.json
 
 *.json
+
+*.gz
