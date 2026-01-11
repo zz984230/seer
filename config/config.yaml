@@ -57,3 +57,64 @@ dividend_rate:
     cache_dir: "./cache/dividend"
     data_dir: "./data/dividend"
     enable_persistence: true
+
+# Tech analysis settings
+tech_analysis:
+  data_source:
+    source: "akshare"  # 数据源: akshare/tushare
+    api_timeout: 30
+    retry_times: 3
+    use_cache: true
+    cache_expire_hours: 24
+    max_workers: 10
+    request_interval: 0.5
+  indicators:
+    macd_fast_period: 12
+    macd_slow_period: 26
+    macd_signal_period: 9
+    rsi_period: 14
+    rsi_overbought: 70.0
+    rsi_oversold: 30.0
+    kdj_period: 9
+    kdj_m1: 3
+    kdj_m2: 3
+    ma_periods: [5, 10, 20, 60]
+  pattern:
+    enable_pattern_recognition: true
+    min_pattern_days: 5
+    max_pattern_days: 60
+    min_confidence: 0.6
+    enable_head_shoulders: true
+    enable_double_top_bottom: true
+    enable_triangle: true
+    enable_wedge: true
+  volume:
+    enable_volume_analysis: true
+    volume_ma_period: 20
+    volume_surge_threshold: 2.0
+    volume_shrink_threshold: 0.5
+  llm:
+    enable_llm_analysis: true
+    provider: "openai"  # LLM提供商: openai/anthropic/google
+    model_name: "gpt-4"
+    api_key: null  # 从环境变量 TECH_ANALYSIS_LLM_API_KEY 读取
+    base_url: null
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 30
+    enable_multi_agent: true
+    agent_types: ["technical", "pattern", "volume"]
+  report:
+    report_dir: "./reports/tech_analysis"
+    enable_html_report: true
+    enable_pdf_report: true
+    enable_json_report: true
+    enable_charts: true
+    chart_width: 1200
+    chart_height: 600
+    chart_dpi: 100
+  storage:
+    cache_dir: "./cache/tech_analysis"
+    data_dir: "./data/tech_analysis"
+    enable_persistence: true
+    auto_update_interval: 24

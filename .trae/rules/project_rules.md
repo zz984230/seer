@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-Seer 是一个小红书爬虫应用，用于获取、清洗、分析和存储小红书平台的数据。
+Seer 是一个小红书爬虫应用，用于获取、清洗、分析和存储小红书平台的数据。同时包含股票技术分析模块，提供股票数据获取、技术指标计算、形态识别和报告生成功能。
 
 ## 项目结构
 
@@ -24,8 +24,25 @@ seer/
 │   │   ├── reporter/     # 报告生成模块
 │   │   └── storage/      # 数据存储模块
 │   ├── seer_dividend_rate/  # 股息率计算模块
-│   └── main.py           # 主入口文件
+│   │   ├── models.py           # 数据模型定义
+│   │   ├── config.py           # 配置管理
+│   │   ├── data_fetcher.py     # 数据获取
+│   │   ├── dividend_calculator.py  # 股息率计算
+│   │   └── README.md           # 模块说明文档
+│   ├── seer_tech_analysis/  # 股票技术分析模块
+│   │   ├── models.py       # 数据模型定义
+│   │   ├── config.py       # 配置管理
+│   │   ├── data_fetcher.py # 数据获取
+│   │   ├── technical_indicators.py  # 技术指标计算
+│   │   ├── pattern_recognition.py    # 形态识别
+│   │   ├── volume_price_analysis.py  # 量价分析
+│   │   ├── llm_agent.py     # LLM分析Agent
+│   │   ├── agent_coordinator.py  # 多Agent协调器
+│   │   └── reporter.py      # 报告生成
+│   ├── main.py              # 小红书爬虫主入口
+│   └── main_tech_analysis.py # 股票技术分析主入口
 ├── tests/                 # 测试目录
+│   └── test_tech_analysis.py  # 技术分析模块测试
 ├── .gitignore            # Git忽略文件
 ├── pyproject.toml        # 项目配置和依赖
 └── README.md             # 项目说明
@@ -47,6 +64,14 @@ seer/
 - **openpyxl**: Excel文件处理
 - **akshare**: 金融数据获取
 - **pandas**: 数据分析
+- **tqdm**: 进度条显示
+- **matplotlib**: 数据可视化
+- **seaborn**: 统计图表
+- **scipy**: 科学计算
+- **reportlab**: PDF报告生成
+- **openai**: OpenAI API集成
+- **anthropic**: Anthropic API集成
+- **google-generativeai**: Google Gemini API集成
 
 ### 开发依赖
 - **pytest**: 单元测试框架
@@ -351,7 +376,11 @@ pytest tests/
 
 ### 运行主程序
 ```bash
+# 小红书爬虫
 python src/main.py --url <小红书用户主页URL>
+
+# 股票技术分析
+python src/main_tech_analysis.py --code <股票代码> --start <开始日期> --end <结束日期>
 ```
 
 ## 注意事项
