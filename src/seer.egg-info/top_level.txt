@@ -1,3 +1,4 @@
 config
 seer
 seer_dividend_rate
+seer_tech_analysis
