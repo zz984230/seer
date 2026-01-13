@@ -62,6 +62,8 @@ class KnowledgeEntry(BaseModel):
 class StockAnalysisRequest(BaseModel):
     stock_code: str = Field(..., description="股票代码")
     stock_name: Optional[str] = Field(None, description="股票名称")
+    start_date: Optional[str] = Field(None, description="分析开始日期")
+    end_date: Optional[str] = Field(None, description="分析结束日期")
     analysis_dimensions: List[str] = Field(default_factory=list, description="分析维度列表")
     enable_fundamental: bool = Field(default=True, description="是否启用基本面分析")
     enable_technical: bool = Field(default=True, description="是否启用技术面分析")

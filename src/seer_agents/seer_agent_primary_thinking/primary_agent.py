@@ -4,13 +4,14 @@ import threading
 from tqdm import tqdm
 from datetime import datetime
 from .models import StockAnalysisRequest, StockAnalysisResult
-from .analysis_agent import (
+from .agents import (
     FundamentalAnalysisAgent, TechnicalAnalysisAgent, 
     IndustryAnalysisAgent, RiskAssessmentAgent
 )
 from .knowledge_base import KnowledgeBase
 from .data_fetcher import StockDataFetcher
 from .technical_analyzer import TechnicalAnalyzer
+from .adk_config import adk_config
 from seer.logger import logger
 
 tqdm.set_lock(threading.Lock())
@@ -64,6 +65,23 @@ class PrimaryThinkingAgent:
         try:
             self.logger.info("开始协调多Agent分析...")
             
+            success, msg, results = self._coordinate_with_thread_pool(request)
+            
+            if not success:
+                return False, msg, []
+            
+            self.logger.info(f"多Agent协调分析完成，共{len(results)}个Agent返回结果")
+            
+            return True, "多Agent分析完成", results
+            
+        except Exception as e:
+            self.logger.error(f"多Agent协调分析失败: {str(e)}")
+            return False, str(e), []
+    
+    def _coordinate_with_thread_pool(self, request: StockAnalysisRequest) -> Tuple[bool, str, List[Dict[str, Any]]]:
+        try:
+            self.logger.info("使用线程池执行并行分析...")
+            
             results = []
             
             with ThreadPoolExecutor(max_workers=len(self.agents)) as executor:
@@ -87,12 +105,15 @@ class PrimaryThinkingAgent:
                         finally:
                             pbar.update(1)
             
-            self.logger.info(f"多Agent协调分析完成，共{len(results)}个Agent返回结果")
+            if not results:
+                self.logger.warning("所有Agent分析失败，没有有效的分析结果")
+                return False, "所有Agent分析失败", []
             
-            return True, "多Agent分析完成", results
+            self.logger.info(f"线程池分析完成，成功 {len(results)}/{len(self.agents)} 个Agent")
+            return True, "线程池分析完成", results
             
         except Exception as e:
-            self.logger.error(f"多Agent协调分析失败: {str(e)}")
+            self.logger.error(f"线程池分析失败: {str(e)}")
             return False, str(e), []
     
     def _calculate_weighted_recommendation(self, analyses: List[Dict[str, Any]]) -> str:
@@ -314,11 +335,15 @@ class PrimaryThinkingAgent:
                 request.end_date
             )
             
+            self.logger.info(f"获取股票数据结果: success={success}, msg={msg}, data_length={len(stock_data) if stock_data else 0}")
+            
             if not success or not stock_data:
                 self.logger.warning(f"获取股票数据失败: {msg}")
                 return False, msg, None
             
             technical_analysis = self.technical_analyzer.comprehensive_analysis(stock_data)
+            
+            self.logger.info(f"技术分析完成: {list(technical_analysis.keys()) if technical_analysis else {}}")
             
             success, msg, fundamental_data = self.data_fetcher.get_stock_fundamental_data(request.stock_code)
             
@@ -332,7 +357,10 @@ class PrimaryThinkingAgent:
                 'fundamental_data': fundamental_data
             }
             
+            self.logger.info("开始协调多Agent分析...")
             success, msg, agent_analyses = self.coordinate_analysis(request)
+            
+            self.logger.info(f"Agent分析结果: success={success}, msg={msg}, analyses_count={len(agent_analyses) if agent_analyses else 0}")
             
             if not success or not agent_analyses:
                 self.logger.warning(f"Agent分析失败: {msg}")
@@ -341,12 +369,15 @@ class PrimaryThinkingAgent:
             success, msg, result = self.synthesize_analysis(request, agent_analyses, context)
             
             if not success:
+                self.logger.warning(f"综合分析失败: {msg}")
                 return False, msg, None
             
             return True, "完整分析完成", result
             
         except Exception as e:
             self.logger.error(f"完整分析流程失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False, str(e), None
     
     def add_agent(self, agent_name: str, agent):

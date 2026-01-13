@@ -24,6 +24,16 @@ class TechnicalAnalyzer:
     
     def calculate_macd(self, df: pd.DataFrame, fast_period: int = 12, 
                      slow_period: int = 26, signal_period: int = 9) -> Dict[str, Any]:
+        if len(df) < slow_period + signal_period:
+            self.logger.warning(f"数据长度不足，无法计算MACD: {len(df)} < {slow_period + signal_period}")
+            return {
+                'dif': [],
+                'dea': [],
+                'macd': [],
+                'signals': [],
+                'description': '数据长度不足，无法计算MACD'
+            }
+        
         close_prices = df['close'].values
         
         ema_fast = pd.Series(close_prices).ewm(span=fast_period, adjust=False).mean()
@@ -34,7 +44,12 @@ class TechnicalAnalyzer:
         macd = (dif - dea) * 2
         
         signals = self._generate_macd_signals(dif, dea, macd)
-        description = self._generate_macd_description(dif[-1], dea[-1], macd[-1])
+        
+        try:
+            description = self._generate_macd_description(dif.iloc[-1], dea.iloc[-1], macd.iloc[-1])
+        except (IndexError, KeyError) as e:
+            self.logger.warning(f"无法生成MACD描述: {str(e)}")
+            description = '无法生成MACD描述'
         
         return {
             'dif': dif.fillna(0).tolist(),
@@ -527,6 +542,21 @@ class TechnicalAnalyzer:
     def comprehensive_analysis(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         df = self._prepare_dataframe(data)
         
+        if len(df) < 2:
+            self.logger.warning(f"数据长度不足，无法进行技术分析: {len(df)} < 2")
+            return {
+                'ma': {},
+                'macd': {'dif': [], 'dea': [], 'macd': [], 'signals': [], 'description': '数据长度不足'},
+                'rsi': {'rsi': [], 'description': '数据长度不足'},
+                'kdj': {'k': [], 'd': [], 'j': [], 'description': '数据长度不足'},
+                'patterns': {},
+                'volume_price': {},
+                'main_force': {},
+                'current_price': None,
+                'price_change': 0,
+                'volume_change': 0
+            }
+        
         ma_data = self.calculate_ma(df)
         macd_data = self.calculate_macd(df)
         rsi_data = self.calculate_rsi(df)
@@ -534,6 +564,16 @@ class TechnicalAnalyzer:
         patterns = self.detect_patterns(df)
         volume_price = self.analyze_volume_price_relation(df)
         main_force = self.analyze_main_force_behavior(df)
+        
+        try:
+            current_price = df['close'].iloc[-1]
+            price_change = (df['close'].iloc[-1] - df['close'].iloc[-2]) / df['close'].iloc[-2] * 100
+            volume_change = (df['volume'].iloc[-1] - df['volume'].iloc[-2]) / df['volume'].iloc[-2] * 100
+        except (IndexError, KeyError, ZeroDivisionError) as e:
+            self.logger.warning(f"计算价格/成交量变化失败: {str(e)}")
+            current_price = df['close'].iloc[-1] if len(df) > 0 else None
+            price_change = 0
+            volume_change = 0
         
         analysis_result = {
             'ma': ma_data,
@@ -543,9 +583,9 @@ class TechnicalAnalyzer:
             'patterns': patterns,
             'volume_price': volume_price,
             'main_force': main_force,
-            'current_price': df['close'].iloc[-1],
-            'price_change': (df['close'].iloc[-1] - df['close'].iloc[-2]) / df['close'].iloc[-2] * 100,
-            'volume_change': (df['volume'].iloc[-1] - df['volume'].iloc[-2]) / df['volume'].iloc[-2] * 100
+            'current_price': current_price,
+            'price_change': price_change,
+            'volume_change': volume_change
         }
         
         return analysis_result
