@@ -1,17 +1,11 @@
 """
 简化的 Google ADK Runner 包装器
-用于在项目中使用 Google ADK 的 LlmAgent
+用于在项目中使用 Google ADK 的 LiteLlm
 """
-import asyncio
 import threading
-from typing import Optional, Any, AsyncGenerator
+from typing import Optional, Any
 from google.genai import types
-from google.adk.agents.llm_agent import LlmAgent
-from google.adk.runners import Runner
-from google.adk.sessions.in_memory_session_service import InMemorySessionService
-from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
-from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
-from google.adk.sessions.session import Session
+from google.adk.models.lite_llm import LiteLlm, LlmRequest
 from seer.logger import logger
 
 
@@ -19,31 +13,11 @@ class SimpleADKRunner:
     """简化的 ADK Runner 包装器"""
     
     def __init__(self):
-        self.session_service = InMemorySessionService()
-        self.memory_service = InMemoryMemoryService()
-        self.artifact_service = InMemoryArtifactService()
-        self.runners = {}
-        self.lock = asyncio.Lock()
-    
-    async def _get_or_create_runner(self, agent: LlmAgent, app_name: str = "seer_stock_analysis") -> Runner:
-        """获取或创建 Runner"""
-        async with self.lock:
-            if agent.name not in self.runners:
-                runner = Runner(
-                    app_name=app_name,
-                    agent=agent,
-                    session_service=self.session_service,
-                    memory_service=self.memory_service,
-                    artifact_service=self.artifact_service
-                )
-                self.runners[agent.name] = runner
-                logger.info(f"创建 Runner: {agent.name}")
-            
-            return self.runners[agent.name]
+        pass
     
     async def run_agent(
         self,
-        agent: LlmAgent,
+        agent: LiteLlm,
         user_message: str,
         user_id: str = "default_user",
         session_id: str = "default_session",
@@ -53,30 +27,26 @@ class SimpleADKRunner:
         运行 Agent 并返回文本响应
         
         Args:
-            agent: LlmAgent 实例
+            agent: LiteLlm 实例
             user_message: 用户消息
             user_id: 用户ID
-            session_id: 会话ID
+            session_id: 会话ID (LiteLlm 不使用)
             app_name: 应用名称
             
         Returns:
             Agent 的文本响应
         """
         try:
-            runner = await self._get_or_create_runner(agent, app_name)
-            
             new_message = types.Content(
                 role="user",
                 parts=[types.Part(text=user_message)]
             )
             
+            llm_request = LlmRequest(contents=[new_message])
+            
             response_text = ""
             
-            async for event in runner.run_async(
-                user_id=user_id,
-                session_id=session_id,
-                new_message=new_message
-            ):
+            async for event in agent.generate_content_async(llm_request):
                 if event.content and event.content.parts:
                     for part in event.content.parts:
                         if part.text:
@@ -92,7 +62,7 @@ class SimpleADKRunner:
     
     def run_agent_sync(
         self,
-        agent: LlmAgent,
+        agent: LiteLlm,
         user_message: str,
         user_id: str = "default_user",
         session_id: str = "default_session",
@@ -102,24 +72,27 @@ class SimpleADKRunner:
         同步运行 Agent
         
         Args:
-            agent: LlmAgent 实例
+            agent: LiteLlm 实例
             user_message: 用户消息
             user_id: 用户ID
-            session_id: 会话ID
+            session_id: 会话ID (LiteLlm 不使用)
             app_name: 应用名称
             
         Returns:
             Agent 的文本响应
         """
+        import asyncio
+        
+        async def run():
+            return await self.run_agent(agent, user_message, user_id, session_id, app_name)
+        
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
         
-        return loop.run_until_complete(
-            self.run_agent(agent, user_message, user_id, session_id, app_name)
-        )
+        return loop.run_until_complete(run())
 
 
 # 全局单例

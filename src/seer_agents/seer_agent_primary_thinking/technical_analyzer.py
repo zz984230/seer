@@ -153,7 +153,12 @@ class TechnicalAnalyzer:
             j_values.iloc[i] = 3 * k_values.iloc[i] - 2 * d_values.iloc[i]
         
         signals = self._generate_kdj_signals(k_values, d_values, j_values)
-        description = self._generate_kdj_description(k_values.iloc[-1], d_values.iloc[-1], j_values.iloc[-1])
+        
+        try:
+            description = self._generate_kdj_description(k_values.iloc[-1], d_values.iloc[-1], j_values.iloc[-1])
+        except (IndexError, KeyError) as e:
+            self.logger.warning(f"无法生成KDJ描述: {str(e)}")
+            description = '无法生成KDJ描述'
         
         return {
             'k': k_values.tolist(),
@@ -256,7 +261,7 @@ class TechnicalAnalyzer:
         if len(df) < 10:
             return {'detected': False, 'reason': '数据不足'}
         
-        recent = df.tail(10)
+        recent = df.tail(10).reset_index(drop=True)
         peak_idx = recent['high'].idxmax()
         valley_idx = recent['low'].idxmin()
         
@@ -395,8 +400,14 @@ class TechnicalAnalyzer:
             return {'error': '数据不足'}
         
         latest = df.iloc[-1]
-        price_change = (latest['close'] - df['close'].iloc[-2]) / df['close'].iloc[-2] * 100
-        volume_change = (latest['volume'] - df['volume'].iloc[-2]) / df['volume'].iloc[-2] * 100
+        
+        try:
+            price_change = (latest['close'] - df['close'].iloc[-2]) / df['close'].iloc[-2] * 100
+            volume_change = (latest['volume'] - df['volume'].iloc[-2]) / df['volume'].iloc[-2] * 100
+        except (IndexError, ZeroDivisionError) as e:
+            self.logger.warning(f"计算价格/成交量变化失败: {str(e)}")
+            price_change = 0
+            volume_change = 0
         
         avg_volume = df['volume'].tail(20).mean()
         
@@ -450,8 +461,13 @@ class TechnicalAnalyzer:
     
     def _determine_current_phase(self, df: pd.DataFrame, patterns: Dict[str, Any]) -> str:
         latest_close = df['close'].iloc[-1]
-        ma20 = df['close'].rolling(20).mean().iloc[-1]
-        ma60 = df['close'].rolling(60).mean().iloc[-1]
+        
+        try:
+            ma20 = df['close'].rolling(20).mean().iloc[-1]
+            ma60 = df['close'].rolling(60).mean().iloc[-1]
+        except (IndexError, KeyError) as e:
+            self.logger.warning(f"计算均线失败: {str(e)}")
+            return "震荡整理阶段"
         
         if latest_close > ma20 > ma60:
             if patterns['top_patterns']['detected']:
@@ -499,11 +515,14 @@ class TechnicalAnalyzer:
         if volume_price.get('relation_type') == "量减价跌":
             risk_score += 1
         
-        latest_close = df['close'].iloc[-1]
-        ma20 = df['close'].rolling(20).mean().iloc[-1]
-        
-        if latest_close < ma20 * 0.95:
-            risk_score += 2
+        try:
+            latest_close = df['close'].iloc[-1]
+            ma20 = df['close'].rolling(20).mean().iloc[-1]
+            
+            if latest_close < ma20 * 0.95:
+                risk_score += 2
+        except (IndexError, KeyError) as e:
+            self.logger.warning(f"计算风险等级失败: {str(e)}")
         
         if risk_score >= 4:
             return "高"
