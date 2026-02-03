@@ -28,3 +28,7 @@ cache/dividend/stock_name_code_mapping.json
 *.gz
 
 src/seer_agents/seer_agent_primary_thinking/src_data/
+
+cache/.DS_Store
+
+.DS_Store

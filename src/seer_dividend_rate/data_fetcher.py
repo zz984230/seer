@@ -42,15 +42,39 @@ def _fetch_stock_indicator_worker(stock_code: str, config_dict: Dict[str, Any], 
         
         time.sleep(config_dict['request_interval'])
         
-        df = ak.stock_zh_a_spot_em()
-        stock_data = df[df['代码'] == stock_code]
+        interfaces = [
+            lambda: ak.stock_zh_a_spot_em(),
+            lambda: ak.stock_individual_info_em(symbol=stock_code),
+            lambda: ak.stock_zh_a_spot_em()
+        ]
         
-        if stock_data.empty:
+        df = None
+        for i, interface in enumerate(interfaces):
+            try:
+                df = interface()
+                if df is not None and not df.empty:
+                    break
+            except Exception:
+                continue
+        
+        if df is None or df.empty:
             return None
         
-        latest = stock_data.iloc[0]
+        data = {}
+        if 'item' in df.columns and 'value' in df.columns:
+            for _, row in df.iterrows():
+                key = row.get('item', '')
+                value = row.get('value', '')
+                data[key] = value
+        else:
+            stock_data = df[df['代码'] == stock_code] if '代码' in df.columns else df
+            if not stock_data.empty:
+                data = stock_data.iloc[0].to_dict()
         
-        pe_ratio = latest.get('市盈率-动态')
+        if not data:
+            return None
+        
+        pe_ratio = data.get('市盈率-动态') or data.get('市盈率-动态')
         if pe_ratio is not None:
             try:
                 pe_ratio = float(pe_ratio)
@@ -59,13 +83,40 @@ def _fetch_stock_indicator_worker(stock_code: str, config_dict: Dict[str, Any], 
             except (ValueError, TypeError):
                 pe_ratio = None
         
+        current_price = data.get('最新价') or data.get('最新')
+        if current_price is not None:
+            try:
+                current_price = float(current_price)
+            except (ValueError, TypeError):
+                current_price = 0.0
+        else:
+            current_price = 0.0
+        
+        market_cap = data.get('总市值') or data.get('总市值')
+        if market_cap is not None:
+            try:
+                market_cap = float(market_cap) / 100000000
+            except (ValueError, TypeError):
+                market_cap = None
+        else:
+            market_cap = None
+        
+        pb_ratio = data.get('市净率') or data.get('市净率')
+        if pb_ratio is not None:
+            try:
+                pb_ratio = float(pb_ratio)
+            except (ValueError, TypeError):
+                pb_ratio = None
+        else:
+            pb_ratio = None
+        
         stock_info = {
             'stock_code': stock_code,
-            'stock_name': latest.get('名称', ''),
-            'current_price': float(latest.get('最新价', 0)),
-            'market_cap': float(latest.get('总市值', 0)) / 100000000 if latest.get('总市值') else None,
+            'stock_name': data.get('名称') or data.get('股票简称') or '',
+            'current_price': current_price,
+            'market_cap': market_cap,
             'pe_ratio': pe_ratio,
-            'pb_ratio': float(latest.get('市净率', 0)) if latest.get('市净率') else None,
+            'pb_ratio': pb_ratio,
             'ps_ratio': None
         }
         
@@ -192,6 +243,67 @@ class DataFetcher:
         """获取缓存文件路径"""
         return os.path.join(self.cache_dir, f"{cache_key}.json")
     
+    def _fetch_spot_data_with_fallback(self, stock_code: Optional[str] = None) -> Optional[pd.DataFrame]:
+        """
+        获取实时行情数据，支持备用接口
+        
+        :param stock_code: 股票代码，如果为None则获取所有股票
+        :return: 行情数据DataFrame
+        """
+        if stock_code:
+            interfaces = [
+                lambda: ak.stock_zh_a_spot_em(),
+                lambda: ak.stock_individual_info_em(symbol=stock_code),
+                lambda: ak.stock_zh_a_spot_em()
+            ]
+        else:
+            interfaces = [
+                lambda: ak.stock_zh_a_spot_em(),
+                lambda: ak.stock_info_a_code_name(),
+                lambda: ak.stock_zh_a_spot_em()
+            ]
+        
+        for i, interface in enumerate(interfaces):
+            try:
+                self.logger.info(f"尝试使用接口 {i+1} 获取数据")
+                df = interface()
+                if df is not None and not df.empty:
+                    self.logger.info(f"接口 {i+1} 成功获取数据")
+                    return df
+            except Exception as e:
+                self.logger.warning(f"接口 {i+1} 失败: {str(e)}")
+                continue
+        
+        self.logger.error("所有接口均失败")
+        return None
+    
+    def _normalize_stock_data(self, df: pd.DataFrame, stock_code: Optional[str] = None) -> Dict[str, Any]:
+        """
+        标准化股票数据格式，处理不同接口返回的不同格式
+        
+        :param df: 原始DataFrame
+        :param stock_code: 股票代码
+        :return: 标准化后的数据字典
+        """
+        if df.empty:
+            return {}
+        
+        if 'item' in df.columns and 'value' in df.columns:
+            data_dict = {}
+            for _, row in df.iterrows():
+                key = row.get('item', '')
+                value = row.get('value', '')
+                data_dict[key] = value
+            return data_dict
+        elif 'code' in df.columns and 'name' in df.columns:
+            if stock_code:
+                stock_data = df[df['code'] == stock_code]
+                if not stock_data.empty:
+                    return stock_data.iloc[0].to_dict()
+            return df.iloc[0].to_dict() if len(df) > 0 else {}
+        else:
+            return df.iloc[0].to_dict() if len(df) > 0 else {}
+    
     def _load_from_cache(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """从缓存加载数据"""
         if not self.cache_enabled:
@@ -256,17 +368,19 @@ class DataFetcher:
             
             time.sleep(self.config.request_interval)
             
-            df = ak.stock_zh_a_spot_em()
+            df = self._fetch_spot_data_with_fallback(stock_code)
             
-            stock_data = df[df['代码'] == stock_code]
-            
-            if stock_data.empty:
+            if df is None or df.empty:
                 self.logger.warning(f"未获取到股票数据: {stock_code}")
                 return None
             
-            latest = stock_data.iloc[0]
+            data = self._normalize_stock_data(df, stock_code)
             
-            pe_ratio = latest.get('市盈率-动态')
+            if not data:
+                self.logger.warning(f"未获取到股票数据: {stock_code}")
+                return None
+            
+            pe_ratio = data.get('市盈率-动态') or data.get('市盈率-动态')
             if pe_ratio is not None:
                 try:
                     pe_ratio = float(pe_ratio)
@@ -275,13 +389,40 @@ class DataFetcher:
                 except (ValueError, TypeError):
                     pe_ratio = None
             
+            current_price = data.get('最新价') or data.get('最新')
+            if current_price is not None:
+                try:
+                    current_price = float(current_price)
+                except (ValueError, TypeError):
+                    current_price = 0.0
+            else:
+                current_price = 0.0
+            
+            market_cap = data.get('总市值') or data.get('总市值')
+            if market_cap is not None:
+                try:
+                    market_cap = float(market_cap) / 100000000
+                except (ValueError, TypeError):
+                    market_cap = None
+            else:
+                market_cap = None
+            
+            pb_ratio = data.get('市净率') or data.get('市净率')
+            if pb_ratio is not None:
+                try:
+                    pb_ratio = float(pb_ratio)
+                except (ValueError, TypeError):
+                    pb_ratio = None
+            else:
+                pb_ratio = None
+            
             stock_info = StockInfo(
                 stock_code=stock_code,
-                stock_name=latest.get('名称', ''),
-                current_price=float(latest.get('最新价', 0)),
-                market_cap=float(latest.get('总市值', 0)) / 100000000 if latest.get('总市值') else None,
+                stock_name=data.get('名称') or data.get('股票简称') or '',
+                current_price=current_price,
+                market_cap=market_cap,
                 pe_ratio=pe_ratio,
-                pb_ratio=float(latest.get('市净率', 0)) if latest.get('市净率') else None,
+                pb_ratio=pb_ratio,
                 ps_ratio=None
             )
             
@@ -310,15 +451,18 @@ class DataFetcher:
             
             time.sleep(self.config.request_interval)
             
-            df = ak.stock_zh_a_spot_em()
+            df = self._fetch_spot_data_with_fallback(stock_code)
             
-            stock_data = df[df['代码'] == stock_code]
-            
-            if stock_data.empty:
+            if df is None or df.empty:
                 self.logger.warning(f"未获取到股票行情数据: {stock_code}")
                 return None
             
-            data = stock_data.iloc[0].to_dict()
+            data = self._normalize_stock_data(df, stock_code)
+            
+            if not data:
+                self.logger.warning(f"未获取到股票行情数据: {stock_code}")
+                return None
+            
             self._save_to_cache(cache_key, data)
             return data
             
@@ -358,9 +502,23 @@ class DataFetcher:
                 
                 report_time = row.get('报告时间', '')
                 year = 0
+                
                 if report_time:
                     try:
-                        year = int(report_time.split('年')[0])
+                        if '半年报' in report_time:
+                            year = int(report_time.split('半年报')[0]) - 1
+                        elif '三季报' in report_time:
+                            year = int(report_time.split('三季报')[0]) - 1
+                        elif '年报' in report_time:
+                            year = int(report_time.split('年报')[0])
+                    except (ValueError, AttributeError):
+                        pass
+                
+                if year == 0:
+                    try:
+                        announce_date = row.get('实施方案公告日期', '')
+                        if announce_date:
+                            year = int(announce_date.split('-')[0])
                     except (ValueError, AttributeError):
                         pass
                 
@@ -442,8 +600,19 @@ class DataFetcher:
             
             time.sleep(self.config.request_interval)
             
-            df = ak.stock_zh_a_spot_em()
-            stock_codes = df['代码'].tolist()
+            df = self._fetch_spot_data_with_fallback()
+            
+            if df is None or df.empty:
+                self.logger.error("获取股票列表失败")
+                return []
+            
+            if '代码' in df.columns:
+                stock_codes = df['代码'].tolist()
+            elif 'code' in df.columns:
+                stock_codes = df['code'].tolist()
+            else:
+                self.logger.error("无法识别股票代码列")
+                return []
             
             self._save_to_cache(cache_key, stock_codes)
             return stock_codes
@@ -469,12 +638,16 @@ class DataFetcher:
             
             time.sleep(self.config.request_interval)
             
-            df = ak.stock_zh_a_spot_em()
+            df = self._fetch_spot_data_with_fallback()
+            
+            if df is None or df.empty:
+                self.logger.error("获取股票名称和代码映射失败")
+                return {}
             
             mapping = {}
             for _, row in df.iterrows():
-                stock_name = row.get('名称', '')
-                stock_code = row.get('代码', '')
+                stock_name = row.get('名称') or row.get('name')
+                stock_code = row.get('代码') or row.get('code')
                 if stock_name and stock_code:
                     mapping[stock_name] = stock_code
             
